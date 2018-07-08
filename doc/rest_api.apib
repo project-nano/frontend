@@ -1,0 +1,1048 @@
+FORMAT: 1A
+
+# Amoeba API
+
+REST API provided by core service
+
+# Group Resource Pool
+
+## Compute Pool [/compute_pools/{pool}]
+
+manage compute pool
+
++ Parameters
+  + pool (string, optional) - pool name/id
+
+### Get all pools in zone [GET]
+
+query all compute pool info in zone
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "default",
+          "enabled": true
+          "cells": 10,
+          "strorage": "some_ceph_cluster",
+          "network": "nat_address_pool_1"
+        },
+        {
+          "name": "fast_instance",
+          "enabled": true
+          "cells": 12,
+          "strorage": "some_ceph_cluster",
+          "network": "nat_address_pool_1"
+        }
+      ]
+    }
+  ]
+
+### Query Pool Info [GET /compute_pools/{pool}]
+
+query compute pool details
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "default",
+        "enabled": true,
+        "cells": 10,
+        "strorage": "some_ceph_cluster",
+        "network": "nat_address_pool_1"
+      }
+    }
+  ]
+
+### Create Compute Pool [POST]
+
+create new compute pool
+
++ Attributes
+  + cells(array[string], optional) - list of initial cell names
+  + network_mode (enum[string]) - plain/share/mono
+  + storage (string, optional) - attached storage pool name
+  + addresses (string, optional) - attached address pool name
+
+
++ Request create compute pool (application/json)
+
+  [
+    {
+      "cells":["cell1", "cell2"],
+      "network_mode": "share",
+      "strorage": "some_ceph_cluster",
+      "addresses": "nat_address_pool_1"
+    }
+  ]
+
+### Delete Compute Pool [DELETE]
+
+delete compute pool
+
+### Change Compute Pool Status [PUT]
+
++ Attributes
+
+  + name(string, optional) - new cell names
+  + enable(boolean, required) - set pool enable/disable
+
++ Request change compute pool (application/json)
+
+  [
+    {
+      "enable": false
+    }
+  ]
+
+
+## Compute Pool Cell [/compute_pool_cells/{pool}]
+
+### Query unallocated cells [GET /compute_pool_cells/]
+
+query cells not attached to any pool
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": [
+        {
+          "name": "cell3",
+          "address": "172.16.3.78",
+          "enabled": true,
+          "alive": true,
+        },
+        {
+          "name": "cell4",
+          "address": "172.16.3.79",
+          "enabled": true,
+          "alive": true,
+        }
+      ]
+    }
+  ]
+
+### Query cells in pool [GET /compute_pool_cells/{pool}]
+
++ Parameters
+
+  + pool (string) - pool name
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": [
+      {
+        "name": "cell1",
+        "address": "172.16.4.7",
+        "enabled": true,
+        "alive": true,
+      },
+      {
+        "name": "cell2",
+        "address": "172.16.7.3",
+        "enabled": true,
+        "alive": true,
+      }
+      ]
+    }
+  ]
+
+### Add Pool Cell [POST /compute_pool_cells/{pool}/{cell}]
+
++ Parameters
+
+  + pool (string) - pool name
+  + cell (string) - cell name
+
+### Remove Pool Cell [DELETE /compute_pool_cells/{pool}/{cell}]
+
++ Parameters
+
+  + pool (string) - pool name
+  + cell (string) - cell name
+
+## Compute Zone Status [/compute_zone_status/]
+
+### query zone status [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "default",
+        "pools": [1, 0]//[disabled, enabled]
+        "cells": [0, 25], //[offline, online]
+        "instances": [3, 100, 3, 1], //[stopped, running, lost, migrate]
+        "cpu_usage": 156.45,
+        "max_cpu": 320,
+        "available_memory": 560,
+        "max_memory": 960,
+        "available_disk": 12457,
+        "max_disk": 34000,
+        "read_speed": 8634,
+        "write_speed": 3673,
+        "receive_speed": 7634,
+        "send_speed": 2643
+      }
+    }
+  ]
+
+## Compute Pool Status [/compute_pool_status/]
+
++ Parameters
+  + pool (string, optional) - target pool name
+
+### query pools status in zone [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[{
+        "name": "default",
+        "enabled": true,
+        "cells": [0, 25], //[offline, online]
+        "instances": [3, 100, 3, 1], //[stopped, running, lost, migrate]
+        "cpu_usage": 156.45,
+        "max_cpu": 320,
+        "available_memory": 560,
+        "max_memory": 960,
+        "available_disk": 12457,
+        "max_disk": 34000,
+        "read_speed": 8634,
+        "write_speed": 3673,
+        "receive_speed": 7634,
+        "send_speed": 2643
+      },
+      {
+        "name": "pool2",
+        "enabled": true,
+        "cells": [0, 15], //[offline, online]
+        "instances": [3, 50, 0, 0], //[stopped, running, lost, migrate]
+        "cpu_usage": 156.45,
+        "max_cpu": 320,
+        "available_memory": 560,
+        "max_memory": 960,
+        "available_disk": 12457,
+        "max_disk": 34000,
+        "read_speed": 8634,
+        "write_speed": 3673,
+        "receive_speed": 7634,
+        "send_speed": 2643
+      }]
+    }
+  ]
+
+### query compute pool status [GET /compute_pool_status/{pool}]
+
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "default",
+        "enabled": true,
+        "cells": [0, 25], //[offline, online]
+        "instances": [3, 100, 3, 1], //[stopped, running, lost, migrate]
+        "cpu_usage": 156.45,
+        "max_cpu": 320,
+        "available_memory": 560,
+        "max_memory": 960,
+        "available_disk": 12457,
+        "max_disk": 34000,
+        "read_speed": 8634,
+        "write_speed": 3673,
+        "receive_speed": 7634,
+        "send_speed": 2643
+      }
+    }
+  ]
+
+## Compute Cell Status [/compute_cell_status/{pool}/{cell}]
+
++ Parameters
+  + pool (string) - target pool name
+  + cell (string, optional) - target cell name
+
+### query compute cell status [GET /compute_cell_status/{pool}/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "cell_93e3de24f0a4",
+          "address": "172.16.4.7",
+          "enabled": true,
+          "alive": true,
+          "instances": [3, 15, 0, 0], //[stopped, running, lost, migrate]
+          "cpu_usage": 156.45,
+          "max_cpu": 320,
+          "available_memory": 560,
+          "max_memory": 960,
+          "available_disk": 12457,
+          "max_disk": 34000,
+          "read_speed": 8634,
+          "write_speed": 3673,
+          "receive_speed": 7634,
+          "send_speed": 2643
+        },
+        {
+          "name": "cell_93e3de24f0a3",
+          "address": "172.16.4.8",
+          "enabled": true,
+          "alive": true,
+          "instances": [0, 12, 1, 0], //[stopped, running, lost, migrate]
+          "cpu_usage": 156.45,
+          "max_cpu": 320,
+          "available_memory": 560,
+          "max_memory": 960,
+          "available_disk": 12457,
+          "max_disk": 34000,
+          "read_speed": 8634,
+          "write_speed": 3673,
+          "receive_speed": 7634,
+          "send_speed": 2643
+        }
+      ]
+    }
+  ]
+
+### get compute cell status [GET /compute_cell_status/{pool}/{cell}]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "cell_93e3de24f0a4",
+        "address": "172.16.4.7",
+        "enabled": true,
+        "alive": true,
+        "instances": [3, 15, 0, 0], //[stopped, running, lost, migrate]
+        "cpu_usage": 156.45,
+        "max_cpu": 320,
+        "available_memory": 560,
+        "max_memory": 960,
+        "available_disk": 12457,
+        "max_disk": 34000,
+        "read_speed": 8634,
+        "write_speed": 3673,
+        "receive_speed": 7634,
+        "send_speed": 2643
+      }
+    }
+  ]
+
+## Instance Status [/instance_status/{pool}/{cell}/]
+
++ Parameters
+  + pool (string) - target pool name
+  + cell (string, optional) - target cell name
+
+### Query instance in pool [GET /instance_status/{pool}/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": [{
+        "name": "test01",
+        "id": "df6723jhew67f3fdsf-fefew",
+        "created": true,
+        "running": true,
+        "cores": 4,
+        "memory": 5120,
+        "disks": [4864000, 854365],
+        "auto_start": true,
+        "display_protocol": "vnc",
+        "monitor_secret": "abd",
+        "internal":{
+          "network_address": "172.18.6.7",
+          "display_address": "172.18.5.3:5901"
+        },
+        "external":{
+          "network_address": "202.3.1.34",
+          "display_address": "202.3.1.34:5901"
+        },
+        "media_attached": true,
+        "media_source": "centos_7_x64_iso"
+      },
+      {
+        "name": "test02",
+        "id": "dr6ufh73dgjf3fdsf-fefew",
+        "created": false,
+        "progress": 46,
+        "running": false,
+        "cores": 4,
+        "memory": 5120,
+        "disks": [4864000, 854365],
+        "auto_start": false
+      }]
+    }
+  ]
+
+### Query instance in cell [GET /instance_status/{pool}/{cell}]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": [{
+        "name": "test01",
+        "id": "df6723jhew67f3fdsf-fefew",
+        "created": true,
+        "running": true,
+        "cores": 4,
+        "memory": 5120,
+        "disks": [4864000, 854365],
+        "auto_start": true,
+        "display_protocol": "vnc",
+        "monitor_secret": "abd",
+        "internal":{
+          "network_address": "172.18.6.7",
+          "display_address": "172.18.5.3:5901"
+        },
+        "external":{
+          "network_address": "202.3.1.34",
+          "display_address": "202.3.1.34:5901"
+        },
+        "media_attached": true,
+        "media_source": "centos_7_x64_iso"
+      },
+      {
+        "name": "test02",
+        "id": "dr6ufh73dgjf3fdsf-fefew",
+        "created": false,
+        "progress": 46,
+        "running": false,
+        "cores": 4,
+        "memory": 5120,
+        "disks": [4864000, 854365],
+        "auto_start": false
+      }]
+    }
+  ]
+
+# Group Virtual machines
+
+## Guest Search [/guest_search/]
+
+### Search Guests [GET]
+
++ Parameters
+
+  + pool (string) - target pool name
+  + cell (string, optional) - target cell
+  + owner (string, optional) - guest owner
+  + group (string, optional) - user group
+  + status (number, optional) - running status
+  + created (boolean, optional) - guest created
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+            "name": "guest1",
+            "id": "df6723jhew67f3fdsf-fefew",
+            "running": false,
+            "owner": "admin",
+            "group": "manager",
+            "pool": "pool1",
+            "cell": "cell_93e3de24f0a4",
+            "cores": 4,
+            "memory": 5120,
+            "total_disk": 4864000,
+            "disks": [482345, 487534],
+            "auto_start": true,
+            "ethernet_address": "ed:35:3d:5a:4e:3f",
+            "display_protocol": "vnc",
+            "internal":{
+              "network_address": "172.18.6.7",
+              "display_address": "172.18.5.3:5901"
+            },
+            "external":{
+              "network_address": "202.3.1.34",
+              "display_address": "202.3.1.34:5901"
+            }
+          }
+        ],
+      [
+        {
+            "name": "guest2",
+            "id": "df6723jhew67f3fdsf-fefet",
+            "running": false,
+            "owner": "admin",
+            "group": "manager",
+            "pool": "pool1",
+            "cell": "cell_93e3de24f0a4",
+            "cores": 4,
+            "memory": 5120,
+            "total_disk": 4864000,
+            "disks": [482345, 487534]
+            "auto_start": true,
+            "ethernet_address": "ed:35:3d:5a:4e:3f",
+            "display_protocol": "vnc",
+            "internal":{
+              "network_address": "172.18.6.7",
+              "display_address": "172.18.5.3:5901"
+            },
+            "external":{
+              "network_address": "202.3.1.34",
+              "display_address": "202.3.1.34:5901"
+            }
+          }
+      ]
+    }
+  ]
+
+## Guests [/guests/]
+
+VM config/storage/network
+
+### Get Guest Details [GET /guests/{id}]
+
++ Parameters
+  + id (string, optional) - guest id
+
+
++ Response 201 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "test01",
+        "created": false
+        "progress": 57 //limit to 100
+      }
+    }
+  ]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "test01",
+        "created": true,
+        "running": false
+        "owner": "admin",
+        "group": "manager",
+        "pool": "pool1",
+        "cell": "cell_93e3de24f0a4"
+        "cores": 4,
+        "memory": 5120,
+        "total_disk": 4864000,
+        "disks": [482345, 487534],
+        "auto_start": true,
+        "ethernet_address": "ed:35:3d:5a:4e:3f"
+        "display_protocol": "vnc",
+        "monitor_secret": "abd",
+        "internal":{
+          "network_address": "172.18.6.7",
+          "display_address": "172.18.5.3:5901"
+        },
+        "external":{
+          "network_address": "202.3.1.34",
+          "display_address": "202.3.1.34:5901"
+        }
+      }
+    }
+  ]
+
+### Create Guest [POST]
+
+request create guest, return a new guest id for query after creating request submit
+
++ Request create guest (application/json)
+
+  + Attributes
+    + name (string) - display name
+    + owner (string) - user id
+    + group (string) - user group
+    + pool (string) - compute pool name
+    + cores (number) - vm cpu cores
+    + memory (number) - vm memory
+    + disks (array[number]) - [system_disk_size, data_disk_n_size...]
+    + auto_start (boolean) - vm auto_start
+    + network_address (string, optional) - optional specified ip address
+    + ethernet_address (string, optional) - optional specified mac address
+    + from_image (string, optional) - initial disk image id
+    + ports (string[number], optional) - nat ports
+    + cpu_priority (enum[number], optional) - 0~2, high ~ low
+    + max_io (number, optional) - max iops
+    + inbound (number, optional) - max inbound bandwidth
+    + outbound (number, optional) - max outbound bandwidth
+
+  + Body
+
+    {
+      "name": "some_instance",
+      "owner": "admin",
+      "group": "manager",
+      "pool": "pool_1",
+      "cores": 8,
+      "memory": 4048,
+      "disks": [4048, 38443],
+      "auto_start": true,
+    }
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "id": "dsfds8979847r3dsf-3r67",
+      }
+    }
+  ]
+
+
+### Delete Guest [DELETE /guests/{id}]
+
+delete guest, release all resource back to pool
+
++ Request delete guest (application/json)
+
+  + Attributes
+    + force (boolean, optional) - stop running instance for deleting
+
+  + Body
+
+    {
+        "force": true
+    }
+
+### Modify Guest Config [PUT /guests/{id}]
+
+modify some config
+
++ Request create guest (application/json)
+
+  + Attributes
+    + name (string) - display name
+    + cpu_cores (number) - vm cpu cores
+    + memory (number) - vm memory
+    + auto_start (boolean) - vm auto_start
+    + network_address (string, optional) - optional specified ip address
+    + ether_address (string, optional) - optional specified mac address
+    + ports (string[number], optional) - nat ports
+    + cpu_priority (enum[number], optional) - 0~2, high ~ low
+    + max_io (number, optional) - max iops
+    + inbound (number, optional) - max inbound bandwidth
+    + outbound (number, optional) - max outbound bandwidth
+
+  + Body
+
+    {
+      "name": "some_instance",
+      "cpu_cores": 8,
+      "memory": 4048,
+      "auto_start": true,
+    }
+
+## Instances [/instances/{id}]
+
+VM running instance
+
++ Parameters
+  + id (string) - instance id/ guest id
+
+### Get running status [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+        "name": "test01",
+        "created": true,
+        "running": true,
+        "owner": "admin",
+        "group": "manager",
+        "pool": "pool1",
+        "cell": "cell_93e3de24f0a4",
+        "cores": 4,
+        "memory": 5120,
+        "total_disk": 4864000,
+        "disks": [482345, 487534]
+        "auto_start": true,
+        "ethernet_address": "ed:35:3d:5a:4e:3f",
+        "display_protocol": "vnc",
+        "internal":{
+          "network_address": "172.18.6.7",
+          "display_address": "172.18.5.3:5901"
+        },
+        "external":{
+          "network_address": "202.3.1.34",
+          "display_address": "202.3.1.34:5901"
+        },
+        "media_attached": true,
+        "media_source": "centos_7_x64_iso",
+        "cpu_usage": 5.34,
+        "memory_available": 1280,
+        "disk_available": 4925700,
+        "bytes_read": 3673,
+        "bytes_written": 8634,
+        "bytes_received": 2643,
+        "bytes_sent": 7634
+      }
+    }
+  ]
+
+### Start Instance [POST]
+
+start guest instance
+
++ Request start instance (application/json)
+
+  + Attributes
+    + from_media (boolean, optional) - boot from media
+    + from_network (boolean, optional) - boot from network source/PXE
+    + source (string, optional) - boot source URI
+
+  + Body
+
+    {
+      "from_media": true,
+      "source": "centos_7_x64_iso"
+    }
+
+### Stop Instance [DELETE]
+
+stop guest instance
+
++ Request stop instance (application/json)
+
+  + Attributes
+    + reboot (boolean) - shutdown or reboot
+    + force(boolean) - force operate
+
+  + Body
+
+    {
+      "reboot": false,
+      "force": true
+    }
+
+### Modify Instance [PUT]
+
+Attach/Detach devices
+
++ Request modify instance (application/json)
+
+  + Attributes
+    + operate (enum[string]) - "attach"/"detach"
+    + target (enum[string]) - media/disk
+    + source (string) - targe source URI
+
+  + Body
+
+    {
+        "operate": "attach",
+        "target": "media"
+        "source": "centos_7_x64_iso"
+    }
+
+## Monitor Channel [/monitor_channels/{id}]
+
+create channel for monitor and control instance. Create a new temporary channel id 'ABC' using POST Method, then connect and consumed channel with websocket address 'ws://host/monitor_channels/ABC' using noVNC or other clients. Unused channel will be released if no connection established in time.
+
+### Create New Channel [POST]
+
++ Request create guest (application/json)
+
+  + Attributes
+    + guest (string) - target guest id
+
+  + Body
+
+    {
+      "guest": "some_guest_id",
+    }
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+          "id": "channel-id-123",
+          "protocol": "vnc",
+          "username": "",
+          "password": "some_secret",
+        }
+    }
+  ]
+
+# Group Image
+
+## Media Image [/media_images/{id}]
+
++ Parameters
+  + id (string) - image id
+
+### Query Image list [Get]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "centos7_64_minimal",
+          "id": "sdf83kjfe-23r4wedf",
+          "description": "some desc",
+          "size": 4872334659735,
+          "tags": ["linux", "64bit", "centos"]
+        },
+        {
+          "name": "win7_home_64",
+          "id": "sdf83kjfe-23r4wertytdf",
+          "description": "win desktop",
+          "size": 4872334659774,
+          "tags": ["windows", "64bit", "windows7"]
+        }
+      ]
+    }
+  ]
+
+### Create Media Image [POST]
+
++ Request Create Image (application/json)
+
+  + Attributes
+
+    + name (string) - image name
+    + owner (string) - image creater
+    + group (string) - image group
+    + description (string, optional) - image description
+    + tags (array[string], optional) - image tags
+
+  + Body
+
+    {
+      "name": "centos7_64_minimal",
+      "owner": "admin",
+      "group": "manager",
+      "description": "some desc",
+      "tags": ["linux", "64bit", "centos"]
+    }
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "id": "sdf83kjfe-23r4wedf",
+        }
+      ]
+    }
+  ]
+
+
+### Detele Media Image [DELETE]
+
+## Media Image File [/media_image_files/{id}]
+
++ Parameters
+  + id (string) - image id
+
+### Download image file [GET]
+
+### Upload image file [POST]
+
++ Request upload (multipart/form-data)
+
+  + Attributes
+    + image (binary) - binary upload image data
+
+  + Body
+
+## Disk Image Search [/disk_image_search]
+
+### Search Disk Image [GET]
+
++ Request query disk images (application/json)
+
+  + Parameters
+
+    + group (string) - image group
+    + tags (array[string], optional) - image tags
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "centos7_64_minimal",
+          "id": "sdf83kjfe-23r4wedf",
+          "description": "some desc",
+          "size": 4872334659735,
+          "tags": ["linux", "64bit", "centos"]
+        },
+        {
+          "name": "win7_home_64",
+          "id": "sdf83kjfe-23r4wertytdf",
+          "description": "win desktop",
+          "size": 4872334659774,
+          "tags": ["windows", "64bit", "windows7"]
+        }
+      ]
+    }
+  ]
+
+## Disk Image [/disk_images/{id}]
+
++ Parameters
+
+  + id (string, optional) - disk image id
+
+### Query Disk Image [GET /disk_images/{id}]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+          "name": "centos7_64_minimal",
+          "created": false,
+          "progress": 46,
+          "description": "some desc",
+          "tags": ["linux", "64bit", "centos"]
+        }
+    }
+  ]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+          "name": "centos7_64_minimal",
+          "created": true,
+          "description": "some desc",
+          "size": 4872334659735,
+          "tags": ["linux", "64bit", "centos"]
+        }
+    }
+  ]
+
+
+
+### Create Disk Image [POST]
+
++ Request Create Image (application/json)
+
+  + Attributes
+
+    + name (string) - image name
+    + guest (string) - source guest id
+    + owner (string) - image creater
+    + group (string) - image group
+    + description (string, optional) - image description
+    + tags (array[string], optional) - image tags
+
+  + Body
+
+    {
+      "name": "centos7_64_minimal",
+      "guest": "dir723rgfyu-rre67grg-efw",
+      "owner": "admin",
+      "group": "manager",
+      "description": "some desc",
+      "tags": ["linux", "64bit", "centos"]
+    }
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "id": "sdf83kjfe-23r4wedf",
+        }
+      ]
+    }
+  ]
+
+### Modify Disk Image [PUT]
+
++ Request Modify Image (application/json)
+
+  + Attributes
+
+    + name (string) - image name
+    + group (string) - image group
+    + description (string, optional) - image description
+    + tags (array[string], optional) - image tags
+
+  + Body
+
+    {
+      "name": "centos7_64_minimal",
+      "group": "system",
+      "description": "some desc",
+      "tags": ["linux", "64bit", "centos"]
+    }
+
+### Delete Disk Image [DELETE]
