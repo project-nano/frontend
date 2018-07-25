@@ -5,7 +5,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!--Import materialize.css-->
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
-    <title>Build Disk Image</title>
+    <title>Upload Disk Image</title>
 
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -38,7 +38,7 @@
               <div class="row">
                   <div class="input-field col m4">
                       <input id="image_name" placeholder="input image name" type="text" class="validate" name="name" required>
-                      <label for="image_name">Image Name</label>
+                      <label for="image_name">Disk Image Name</label>
                   </div>
               </div>
               <div class="row">
@@ -96,18 +96,25 @@
                   </div>
               </div>
               <div class="row">
-                <div class="input-field col m3">
-                  <select id="pool-options" onchange="onFilterPoolChanged()">
-                  </select>
-                  <label>Source Pool</label>
+                <div class="col m2">
+                  <label>Disk File</label>
                 </div>
               </div>
               <div class="row">
-                <div class="input-field col m8">
-                  <select id="guest-options">
-                  </select>
-                  <label>Source Guest</label>
-                </div>
+                <form action="" method="post" enctype="multipart/form-data" id="upload_form">
+                  <div class="file-field input-field col m12">
+                    <div class="row">
+                      <div class="file-path-wrapper col m10">
+                        <input class="file-path validate" type="text" placeholder="choose upload file" required>
+                      </div>
+                      <div class="waves-effect waves-light blue-grey lighten-2 btn-small col m2">
+                        <span>select
+                        </span>
+                        <input type="file" name="image">
+                      </div>
+                    </div>
+                  </div>
+                </form>
               </div>
             </div>
         </div>
@@ -120,8 +127,8 @@
                         class="material-icons left">chevron_left</i>Back</a>
             </div>
             <div class="col m2 right" id="button">
-                <button class="waves-effect waves-light blue-grey lighten-2 btn" onclick="buildImage()">Build
-                    <i class="material-icons right">build</i>
+                <button class="waves-effect waves-light blue-grey lighten-2 btn" onclick="uploadImage()">Upload
+                    <i class="material-icons right">file_upload</i>
                 </button>
             </div>
         </div>
@@ -139,11 +146,12 @@
 
 <!--JavaScript at end of body for optimized loading-->
 <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="js/jquery.form.js"></script>
 <script type="text/javascript" src="js/materialize.min.js"></script>
 <script>
 M.AutoInit();
 
-function buildImage(){
+function uploadImage(){
   var imageName = $('#image_name').val();
   if (!imageName){
     M.toast({html: 'invalid image name'});
@@ -159,13 +167,7 @@ function buildImage(){
   $(':checkbox:checked').each(function(){
     tags.push($(this).val());
   });
-
-  var guest = $('#guest-options').val();
-  if (!guest || ("" == guest)){
-    M.toast({html: 'chosse source guest'});
-    return;
-  }
-  createImage(imageName, imageDescription, tags, guest);
+  createImage(imageName, imageDescription, tags);
 }
 
 function releaseImage(id){
@@ -183,11 +185,10 @@ function releaseImage(id){
   });
 }
 
-function createImage(name, description, tags, guest){
+function createImage(name, description, tags){
   var request = new Object();
   request.name = name;
   request.description = description;
-  request.guest = guest;
   request.owner = "admin";
   request.group = "manager";
   request.tags = tags;
@@ -200,148 +201,83 @@ function createImage(name, description, tags, guest){
           return;
       }
       var imageId = result['data']['id'];
-      startTransport(name, description, tags, guest, imageId);
+      startTransport(name, description, tags, imageId);
     },
     "json"
   )
 }
 
-function startTransport(name, description, tags, guest, imageId){
-  $('#button').empty();
-  $('#main-panel').empty();
-  var table = $('<table>').addClass('striped');
-  table.append(
-    $('<tr>').append(
-      $('<td>').text('Name')
-    ).append(
-      $('<td>').text(name)
-    )
-  ).append(
-    $('<tr>').append(
-      $('<td>').text('Guest')
-    ).append(
-      $('<td>').text(guest)
-    )
-  ).append(
-    $('<tr>').append(
-      $('<td>').text('Description')
-    ).append(
-      $('<td>').text(description)
-    )
-  ).append(
-    $('<tr>').append(
-      $('<td>').text('Tags')
-    ).append(
-      $('<td>').text(tags.join('/'))
-    )
-  ).append(
-    $('<tr>').append(
-      $('<td>').text('ID')
-    ).append(
-      $('<td>').text(imageId).attr('id', 'image_id')
-    )
-  ).append(
-    $('<tr>').append(
-      $('<td>').text('Result')
-    ).append(
-      $('<td>').attr('id', 'operate_result').append(
-        $('<div>').addClass('center').append(
-          $('<span>').text('Building... 0%').attr('id', 'progress-info')
+function startTransport(name, description, tags, imageId){
+  var form = $('#upload_form');
+  form.attr('action', '/disk_image_files/' + imageId);
+  form.ajaxForm({
+    beforeSend: function(){
+      $('#button').empty();
+      $('#main-panel').empty();
+      var table = $('<table>').addClass('striped');
+      table.append(
+        $('<tr>').append(
+          $('<td>').text('Name')
+        ).append(
+          $('<td>').text(name)
         )
       ).append(
-        $('<div>').addClass('progress').append(
-          $('<div>').addClass('determinate').width('0%').attr('id', 'progress-bar')
+        $('<tr>').append(
+          $('<td>').text('Description')
+        ).append(
+          $('<td>').text(description)
         )
-      )
-    )
-  );
-  $('#main-panel').append(table);
-  monitorProgress();
-}
-
-function monitorProgress(){
-  var imageID = $('#image_id').text();
-  $.getJSON(
-    '/disk_images/' + imageID,
-    function(result){
-      if (0 != result['error_code']) {
-          M.toast({html: 'monitor progress fail:' + result['message']});
-          releaseImage(imageID);
-          return;
-      }
-      var created = result['data']['created'];
-      if (created){
-        $('#operate_result').text('success');
-        $('#button').append(
-          $('<a>').attr('href', '/images.html').append(
-            $('<button>').addClass('waves-effect waves-light blue-grey lighten-2 btn').text('Finish').prepend(
-              $('<i>').addClass('material-icons').text('check')
+      ).append(
+        $('<tr>').append(
+          $('<td>').text('Tags')
+        ).append(
+          $('<td>').text(tags.join('/'))
+        )
+      ).append(
+        $('<tr>').append(
+          $('<td>').text('ID')
+        ).append(
+          $('<td>').text(imageId)
+        )
+      ).append(
+        $('<tr>').append(
+          $('<td>').text('Result')
+        ).append(
+          $('<td>').attr('id', 'operate_result').append(
+            $('<div>').addClass('center').append(
+              $('<span>').text('Uploading... 0%').attr('id', 'progress-info')
+            )
+          ).append(
+            $('<div>').addClass('progress').append(
+              $('<div>').addClass('determinate').width('0%').attr('id', 'progress-bar')
             )
           )
-        );
-        return;
-      }
-      var progress = result['data']['progress'] + '%';
-      $('#progress-bar').width(progress);
-      $('#progress-info').text('Creating... ' + progress);
-      setTimeout(monitorProgress, 1000);
-    }
-  )
-}
-
-function onFilterPoolChanged(){
-  var poolName = $('#pool-options').val();
-  if ("" == poolName){
-    return;
-  }
-  loadInstances(poolName);
-}
-
-function loadPools(){
-  $.getJSON(
-    '/compute_pools/',
-    function(result){
-      if (0 != result['error_code']) {
-          M.toast({html: 'load pools fail:' + result['message']});
-          return;
-      }
-      $('#pool-options').empty();
-      result['data'].forEach((pool) =>{
-        $('#pool-options').append(
-          $('<option>').attr('value', pool['name']).text(pool['name'])
-        );
-      });
-      M.FormSelect.init($('#pool-options'));
-      onFilterPoolChanged();
-    }
-  );
-}
-
-function loadInstances(poolName){
-  $.getJSON(
-    '/guest_search/?pool=' + poolName,
-    function(result){
-      if (0 != result['error_code']) {
-          M.toast({html: 'load instances fail:' + result['message']});
-          return;
-      }
-      $('#guest-options').empty().append(
-        $('<option>').attr('value','').attr('disabled','').attr('selected', '').text('Choose Guest')
+        )
       );
-      result['data'].forEach((guest) =>{
-        $('#guest-options').append(
-          $('<option>').attr('value', guest['id']).text(guest['name'])
-        );
-      });
-      M.FormSelect.init($('#guest-options'));
+      $('#main-panel').append(table);
+    },
+    uploadProgress: function(event, position, total, percentComplete) {
+      var progress = percentComplete + '%';
+      $('#progress-bar').width(progress);
+      $('#progress-info').text('Uploading... ' + progress);
+    },
+    success: function() {
+      $('#operate_result').text('success');
+      $('#button').append(
+        $('<a>').attr('href', '/images.html').append(
+          $('<button>').addClass('waves-effect waves-light blue-grey lighten-2 btn').text('Finish').prepend(
+            $('<i>').addClass('material-icons').text('check')
+          )
+        )
+      );
+    },
+    error: function(jqXHR, textStatus, errorThrown){
+      releaseImage(imageId);
+      $('#operate_result').text(errorThrown);
     }
-  );
+  });
+  form.submit();
 }
-
-$(function(){
-  loadPools();
-});
-
 
 </script>
 </body>

@@ -26,6 +26,10 @@ type FrontEndService struct {
 	framework.SimpleRunner
 }
 
+const (
+	CurrentVersion = "0.1.2"
+)
+
 func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
 	service = &FrontEndService{}
 	service.listenAddress = fmt.Sprintf("%s:%d", listenHost, listenPort)
@@ -59,9 +63,13 @@ func (service *FrontEndService)GetBackendURL() string{
 	return service.backendURL
 }
 
+func (service *FrontEndService) GetVersion() string{
+	return CurrentVersion
+}
+
 func (service *FrontEndService)Routine(){
+	log.Printf("<frontend> %s started", CurrentVersion)
 	go service.frontendServer.Serve(service.serviceListener)
-	log.Println("<frontend> server started")
 	service.channelManager.Start()
 	for !service.IsStopping(){
 		select {
@@ -120,6 +128,8 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.GET("/disk_images/:id", service.redirectToBackend)
 	router.POST("/disk_images/", service.redirectToBackend)
 	router.DELETE("/disk_images/:id", service.redirectToBackend)
+	router.GET("/disk_image_files/:id", service.redirectToBackend)
+	router.POST("/disk_image_files/:id", service.redirectToBackend)
 
 	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
 	router.POST("/monitor_channels/", service.handleCreateChannel)
