@@ -385,6 +385,7 @@ query cells not attached to any pool
         "memory": 5120,
         "disks": [4864000, 854365],
         "auto_start": true,
+        "system": "linux",
         "display_protocol": "vnc",
         "monitor_secret": "abd",
         "internal":{
@@ -407,7 +408,8 @@ query cells not attached to any pool
         "cores": 4,
         "memory": 5120,
         "disks": [4864000, 854365],
-        "auto_start": false
+        "auto_start": false,
+        "system": "linux"
       }]
     }
   ]
@@ -429,6 +431,7 @@ query cells not attached to any pool
         "memory": 5120,
         "disks": [4864000, 854365],
         "auto_start": true,
+        "system": "linux",
         "display_protocol": "vnc",
         "monitor_secret": "abd",
         "internal":{
@@ -451,7 +454,8 @@ query cells not attached to any pool
         "cores": 4,
         "memory": 5120,
         "disks": [4864000, 854365],
-        "auto_start": false
+        "auto_start": false,
+        "system": "windows"
       }]
     }
   ]
@@ -491,6 +495,7 @@ query cells not attached to any pool
             "total_disk": 4864000,
             "disks": [482345, 487534],
             "auto_start": true,
+            "system": "windows",
             "ethernet_address": "ed:35:3d:5a:4e:3f",
             "display_protocol": "vnc",
             "internal":{
@@ -517,6 +522,7 @@ query cells not attached to any pool
             "total_disk": 4864000,
             "disks": [482345, 487534]
             "auto_start": true,
+            "system": "linux",
             "ethernet_address": "ed:35:3d:5a:4e:3f",
             "display_protocol": "vnc",
             "internal":{
@@ -575,6 +581,7 @@ VM config/storage/network
         "total_disk": 4864000,
         "disks": [482345, 487534],
         "auto_start": true,
+        "system": "linux",
         "ethernet_address": "ed:35:3d:5a:4e:3f"
         "display_protocol": "vnc",
         "monitor_secret": "abd",
@@ -605,6 +612,7 @@ request create guest, return a new guest id for query after creating request sub
     + memory (number) - vm memory
     + disks (array[number]) - [system_disk_size, data_disk_n_size...]
     + auto_start (boolean) - vm auto_start
+    + system (string, optional) - system type, "linux", "windows", etc
     + network_address (string, optional) - optional specified ip address
     + ethernet_address (string, optional) - optional specified mac address
     + from_image (string, optional) - initial disk image id
@@ -625,6 +633,7 @@ request create guest, return a new guest id for query after creating request sub
       "memory": 4048,
       "disks": [4048, 38443],
       "auto_start": true,
+      "system": "linux"
     }
 
 + Response 202 (application/json)
@@ -682,6 +691,125 @@ modify some config
       "memory": 4048,
       "auto_start": true,
     }
+
+## Guest Cores [/guest/{id}/cores]
+
+### Modify Cores [PUT]
+
++ Request modify cores (application/json)
+
+  + Attributes
+    + cores(number) - new cores
+    + immediate (boolean, optional) - take effect when running
+
+  + Body
+
+    {
+      "cores": 4,
+      "immediate": false
+    }
+
+## Guest Memory [/guest/{id}/memory]
+
+### Modify Memory [PUT]
+
++ Request modify memory (application/json)
+
+  + Attributes
+    + memory(number) - memory in bytes
+    + immediate (boolean, optional) - take effect when running
+
+  + Body
+
+    {
+      "memory": 4294967296,
+      "immediate": false
+    }
+
+## Resize Guest Disk [/guest/{id}/disks/resize/{disk}]
+
++ Parameters
+  + id (string) - guest id
+  + disk (number) - index of target disk, system:0, data0:1, data1:2...
+
+### Modify Disk Size [PUT]
+
++ Request modify disk (application/json)
+
+  + Attributes
+    + size(number) - size in bytes
+    + immediate (boolean, optional) - take effect when running
+
+  + Body
+
+    {
+      "size": 42949672960,
+      "immediate": false
+    }
+
+## Shrink Guest Disk [/guest/{id}/disks/shrink/{disk}]
+
++ Parameters
+  + id (string) - guest id
+  + disk (number) - index of target disk, system:0, data0:1, data1:2...
+
+### Shrink Disk [PUT]
+
++ Request shrink disk (application/json)
+
+  + Attributes
+    + immediate (boolean, optional) - take effect when running
+
+  + Body
+
+    {
+      "immediate": false
+    }
+
+## Guest User Auth [/guest/{id}/auth]
+
+### Modify User Password [PUT]
+
++ Request modify disk (application/json)
+
+  + Attributes
+    + password (string, optional) - new password, automated generate when omitted
+    + user(number, optional) - username, automated choose username by system type when omitted
+
+  + Body
+
+    {
+      "password": "asdb12356",
+      "user": "root"
+    }
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+        "password": "1235656756",
+        "user": "root"
+      }
+    }
+  ]
+
+### Get User Password [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+        "password": "1235656756",
+        "user": "root"
+      }
+    }
+  ]
 
 ## Instances [/instances/{id}]
 

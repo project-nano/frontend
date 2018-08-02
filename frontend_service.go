@@ -27,7 +27,7 @@ type FrontEndService struct {
 }
 
 const (
-	CurrentVersion = "0.1.2"
+	CurrentVersion = "0.2.1"
 )
 
 func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
@@ -96,10 +96,18 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.GET("/instances/:id", service.redirectToBackend)
 	router.POST("/instances/:id", service.redirectToBackend)
 	router.DELETE("/instances/:id", service.redirectToBackend)
+
 	router.GET("/guests/:id", service.redirectToBackend)
 	router.POST("/guests/", service.redirectToBackend)
 	router.DELETE("/guests/:id", service.redirectToBackend)
 	router.GET("/guest_search/*filepath", service.redirectToBackend)
+	router.PUT("/guest/:id/cores", service.redirectToBackend)
+	router.PUT("/guest/:id/memory", service.redirectToBackend)
+	router.PUT("/guest/:id/auth", service.redirectToBackend)
+	router.GET("/guest/:id/auth", service.redirectToBackend)
+	router.PUT("/guest/:id/disks/resize/:index", service.redirectToBackend)
+	router.PUT("/guest/:id/disks/shrink/:index", service.redirectToBackend)
+
 
 	router.GET("/compute_zone_status/", service.redirectToBackend)
 	router.GET("/compute_pool_status/", service.redirectToBackend)
