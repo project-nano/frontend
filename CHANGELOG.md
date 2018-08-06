@@ -1,5 +1,11 @@
 # Change Log
 
+## 2018-8-6
+
+### Modified
+
+- Add auto fresh switch in cell/instance list
+
 ## [0.2.1] - 2018-7-31
 
 ### Added
