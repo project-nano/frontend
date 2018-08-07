@@ -1,5 +1,13 @@
 # Change Log
 
+## 2018-8-7
+
+### Modified
+
+- Display instance address/container cell in instances/instance_list
+
+- Display VNC address/secret in detail page
+
 ## 2018-8-6
 
 ### Modified
