@@ -616,11 +616,18 @@ request create guest, return a new guest id for query after creating request sub
     + network_address (string, optional) - optional specified ip address
     + ethernet_address (string, optional) - optional specified mac address
     + from_image (string, optional) - initial disk image id
-    + ports (string[number], optional) - nat ports
+    + ports (array[number], optional) - nat ports
     + cpu_priority (enum[number], optional) - 0~2, high ~ low
     + max_io (number, optional) - max iops
     + inbound (number, optional) - max inbound bandwidth
     + outbound (number, optional) - max outbound bandwidth
+    + system_version (string, optional) - os version, 'centos7', 'win2012'
+    + modules (array[string], optional) - installed guest module, "qemu"/"cloud-init"
+    + cloud-init (object, optional) - ci params
+      - ssh_disable_root (boolean, optional) - prevent root user login via SSH, enable in default
+      - admin_name (string, optional) - specify admin name, using 'root' when omitted
+      - admin_secret (string, optional) - password in plain text, nano generate a new one when omitted
+      - data_path (string, optional) - data disk mount path, '/opt/data' in default
 
   + Body
 
@@ -633,7 +640,15 @@ request create guest, return a new guest id for query after creating request sub
       "memory": 4048,
       "disks": [4048, 38443],
       "auto_start": true,
-      "system": "linux"
+      "system": "linux",
+      "system_version": "centos7",
+      "modules": ["qemu", "cloud-init"],
+      "cloud-init":{
+        "ssh_disable_root": true,
+        "admin_name": "nano",
+        "admin_secret": "12345678",
+        "data_path": "/opt/data"
+      }
     }
 
 + Response 202 (application/json)
