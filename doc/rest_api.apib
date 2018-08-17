@@ -623,7 +623,7 @@ request create guest, return a new guest id for query after creating request sub
     + outbound (number, optional) - max outbound bandwidth
     + system_version (string, optional) - os version, 'centos7', 'win2012'
     + modules (array[string], optional) - installed guest module, "qemu"/"cloud-init"
-    + cloud-init (object, optional) - ci params
+    + cloud_init (object, optional) - ci params
       - root_enabled (boolean, optional) - allow root user login via SSH, enable in default
       - admin_name (string, optional) - specify admin name, using 'root' when omitted
       - admin_secret (string, optional) - password in plain text, nano generate a new one when omitted
@@ -643,7 +643,7 @@ request create guest, return a new guest id for query after creating request sub
       "system": "linux",
       "system_version": "centos7",
       "modules": ["qemu", "cloud-init"],
-      "cloud-init":{
+      "cloud_init":{
         "root_enabled": true,
         "admin_name": "nano",
         "admin_secret": "12345678",

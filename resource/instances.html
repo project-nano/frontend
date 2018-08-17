@@ -53,7 +53,7 @@
           </select>
         </div>
         <div class="input-field col m3">
-          <select name="cell" id="cell-options" onchange="onFilterCellChanged()">
+          <select name="cell" id="cell-options" onchange="reloadInstances()">
           </select>
         </div>
       </div>
@@ -63,6 +63,17 @@
         <div class="row">
             <div class="col m3">
                 <a class="waves-effect waves-light blue-grey lighten-2 btn" id="create_button"><i class="material-icons left">add</i>Create Instance</a>
+            </div>
+            <div class="col m3 push-m6">
+                <span>Auto Refresh</span>
+                  <div class="switch">
+                      <label>
+                          Off
+                          <input type="checkbox" checked onclick="onAutoFreshSwitched()" id="cb_autofresh">
+                          <span class="lever"></span>
+                          On
+                      </label>
+                  </div>
             </div>
         </div>
     </div>
@@ -119,7 +130,7 @@
     M.AutoInit();
 
     function refresh(){
-      location.reload();
+      reloadInstances();
     }
 
     function outputMessage(message){
@@ -142,8 +153,14 @@
             outputMessage(result['message']);
             return;
           }
+          if (!result['data']){
+            outputMessage('no instance available');
+            $('#instance_list').empty();
+            return
+          }
           if (0 == result['data'].length){
             outputMessage('no instance available');
+            $('#instance_list').empty();
             return;
           }
           var container = $('<div>').addClass('row');
@@ -430,7 +447,7 @@
 
     function startWithMedia(name, id){
       var media = $('#media_options').val();
-      var mediaName = $('#media_options').text();
+      var mediaName = $('#media_options :selected').text();
       $.post(
         '/instances/' + id,
         JSON.stringify({
@@ -536,7 +553,7 @@
       loadInstances(poolName, "");
     }
 
-    function onFilterCellChanged(){
+    function reloadInstances(){
       var cellName = $('#cell-options').val();
       var poolName = $('#pool-options').val();
       loadInstances(poolName, cellName);
@@ -555,6 +572,21 @@
         queryParams.set(p[0], p[1]);
       });
       return queryParams;
+    }
+
+    var intervalID;
+    var refreshInterval = 5*1000;
+
+    function onAutoFreshSwitched(){
+      var autoFresh = $('#cb_autofresh').prop( "checked");
+      if (autoFresh){
+        intervalID = setInterval(refresh, refreshInterval);
+        M.toast({html: "Auto Fresh Enabled"});
+      }else{
+        clearInterval(intervalID);
+        intervalID = undefined;
+        M.toast({html: "Auto Fresh Disabled"});
+      }
     }
 
     $(function(){
@@ -585,6 +617,9 @@
       }else{
         outputMessage('please select filter pool');
       }
+
+      //enable auto fresh in default
+      intervalID = setInterval(refresh, refreshInterval);
     });
 
 </script>

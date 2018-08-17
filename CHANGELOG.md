@@ -1,5 +1,21 @@
 # Change Log
 
+## 2018-8-17
+
+### Added
+
+- Support choose installed module when cloning from an image
+
+- Enable change admin password/ create new admin/ disk auto resize/ data disk mount when Cloud-Init module installed
+
+- Add auto fresh in instances.html
+
+### Modified
+
+- Optimize instances/cells auto refresh, interval reduced to 5 seconds
+
+- Fixed: multiple image names displayed when starting with media
+
 ## 2018-8-7
 
 ### Modified

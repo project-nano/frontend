@@ -141,7 +141,7 @@
     }
 
     function refresh(){
-      location.reload();
+      loadInstances();
     }
 
     function outputMessage(message){
@@ -331,7 +331,7 @@
               table.append(content)
             );
           });
-          $('#instance_list').append(container);
+          $('#instance_list').empty().append(container);
           M.Tooltip.init($('.tooltipped'));
         }
       );
@@ -453,7 +453,7 @@
     }
     function startWithMedia(name, id){
       var media = $('#media_options').val();
-      var mediaName = $('#media_options').text();
+      var mediaName = $('#media_options :selected').text();
       $.post(
         '/instances/' + id,
         JSON.stringify({
@@ -503,11 +503,11 @@
     }
 
     var intervalID;
-
+    var refreshInterval = 5*1000;
     function onAutoFreshSwitched(){
       var autoFresh = $('#cb_autofresh').prop( "checked");
       if (autoFresh){
-        intervalID = setInterval(refresh, 10*1000);
+        intervalID = setInterval(refresh, refreshInterval);
         M.toast({html: "Auto Fresh Enabled"});
       }else{
         clearInterval(intervalID);
@@ -543,8 +543,7 @@
 
       loadInstances();
 
-      //auto reload every 10 seconds
-      intervalID = setInterval(refresh, 10*1000);
+      intervalID = setInterval(refresh, refreshInterval);
     });
 
 </script>
