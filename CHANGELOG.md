@@ -1,5 +1,17 @@
 # Change Log
 
+## 2018-8-21
+
+### Added
+
+- Create time of Instance
+
+- Create/modify time of Image
+
+- Snapshot management: create/ delete / revert
+
+- Insert / eject media image
+
 ## 2018-8-17
 
 ### Added

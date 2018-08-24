@@ -396,6 +396,7 @@ query cells not attached to any pool
           "network_address": "202.3.1.34",
           "display_address": "202.3.1.34:5901"
         },
+        "create_time": "2018-08-21 00:12:34",
         "media_attached": true,
         "media_source": "centos_7_x64_iso"
       },
@@ -442,6 +443,7 @@ query cells not attached to any pool
           "network_address": "202.3.1.34",
           "display_address": "202.3.1.34:5901"
         },
+        "create_time": "2018-08-21 00:12:34",
         "media_attached": true,
         "media_source": "centos_7_x64_iso"
       },
@@ -505,7 +507,8 @@ query cells not attached to any pool
             "external":{
               "network_address": "202.3.1.34",
               "display_address": "202.3.1.34:5901"
-            }
+            },
+            "create_time": "2018-08-21 00:12:34"
           }
         ],
       [
@@ -532,7 +535,8 @@ query cells not attached to any pool
             "external":{
               "network_address": "202.3.1.34",
               "display_address": "202.3.1.34:5901"
-            }
+            },
+            "create_time": "2018-08-21 00:12:34"
           }
       ]
     }
@@ -592,7 +596,8 @@ VM config/storage/network
         "external":{
           "network_address": "202.3.1.34",
           "display_address": "202.3.1.34:5901"
-        }
+        },
+        "create_time": "2018-08-21 00:12:34"
       }
     }
   ]
@@ -864,6 +869,7 @@ VM running instance
           "network_address": "202.3.1.34",
           "display_address": "202.3.1.34:5901"
         },
+        "create_time": "2018-08-21 00:12:34",
         "media_attached": true,
         "media_source": "centos_7_x64_iso",
         "cpu_usage": 5.34,
@@ -886,13 +892,13 @@ start guest instance
   + Attributes
     + from_media (boolean, optional) - boot from media
     + from_network (boolean, optional) - boot from network source/PXE
-    + source (string, optional) - boot source URI
+    + source (string, optional) - boot source id/URI
 
   + Body
 
     {
       "from_media": true,
-      "source": "centos_7_x64_iso"
+      "source": "bd0fe127-a8db-4c89-98ea-9a5070b08aae"
     }
 
 ### Stop Instance [DELETE]
@@ -912,24 +918,115 @@ stop guest instance
       "force": true
     }
 
-### Modify Instance [PUT]
+## Instance Media [/instances/{id}/media]
 
-Attach/Detach devices
+### Insert Media [POST]
 
-+ Request modify instance (application/json)
+Insert media into a running instance
+
++ Request insert Media (application/json)
 
   + Attributes
-    + operate (enum[string]) - "attach"/"detach"
-    + target (enum[string]) - media/disk
-    + source (string) - targe source URI
+    + source (string) - media id
+    + type (int, optional) - media type, 0 = Media Image
 
   + Body
 
     {
-        "operate": "attach",
-        "target": "media"
-        "source": "centos_7_x64_iso"
+        "source": "bd0fe127-a8db-4c89-98ea-9a5070b08aae",
+        "type": 0
     }
+
+### Eject Media [DELETE]
+
+Eject media from a running instance
+
+## Snapshots manage [/instances/{id}/snapshots/]
+
+### Query snapshot tree [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+      "origin":{
+        "is_root": true
+      },
+      "snapshot1": {
+        "backing": "origin"
+      },
+      "snapshot2": {
+        "backing": "snapshot1"
+      },
+      "snapshot3": {
+        "backing": "snapshot2",
+        "is_current": true
+      },
+      "another_branch": {
+        "backing": "origin"
+      },
+      "another_end": {
+        "backing": "another_branch"
+      }
+      ]
+    }
+  ]
+
+### Create new snapshot [POST]
+
+creae a new snapshot
+
++ Request restore snapshot (application/json)
+
+  + Attributes
+    + name (string) - snapshot name
+    + description (string, optional) - snapshot description
+
+  + Body
+
+    {
+        "name": "snapshot1",
+        "description": "this is a snapshot example"
+    }
+
+### Restore snapshot [PUT]
+
+resume to a specified snapshot
+
++ Request restore snapshot (application/json)
+
+  + Attributes
+    + target (string) - snapshot name
+
+  + Body
+
+    {
+        "target": "snapshot1"
+    }
+
+
+## Snapshot [/instances/{id}/snapshots/{name}]
+
+### Get snapshot info [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "running": false,
+        "description": "this is snapshot before installing cloud-init",
+        "create_time": "2018-08-21 12:34:56"
+      }
+    }
+  ]
+
+### Delete snapshot [DELETE]
 
 ## Monitor Channel [/monitor_channels/{id}]
 
@@ -983,6 +1080,8 @@ create channel for monitor and control instance. Create a new temporary channel 
           "name": "centos7_64_minimal",
           "id": "sdf83kjfe-23r4wedf",
           "description": "some desc",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
           "size": 4872334659735,
           "tags": ["linux", "64bit", "centos"]
         },
@@ -990,6 +1089,8 @@ create channel for monitor and control instance. Create a new temporary channel 
           "name": "win7_home_64",
           "id": "sdf83kjfe-23r4wertytdf",
           "description": "win desktop",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
           "size": 4872334659774,
           "tags": ["windows", "64bit", "windows7"]
         }
@@ -1074,6 +1175,8 @@ create channel for monitor and control instance. Create a new temporary channel 
           "name": "centos7_64_minimal",
           "id": "sdf83kjfe-23r4wedf",
           "description": "some desc",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
           "size": 4872334659735,
           "tags": ["linux", "64bit", "centos"]
         },
@@ -1081,6 +1184,8 @@ create channel for monitor and control instance. Create a new temporary channel 
           "name": "win7_home_64",
           "id": "sdf83kjfe-23r4wertytdf",
           "description": "win desktop",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
           "size": 4872334659774,
           "tags": ["windows", "64bit", "windows7"]
         }
@@ -1122,6 +1227,8 @@ create channel for monitor and control instance. Create a new temporary channel 
           "name": "centos7_64_minimal",
           "created": true,
           "description": "some desc",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
           "size": 4872334659735,
           "tags": ["linux", "64bit", "centos"]
         }
