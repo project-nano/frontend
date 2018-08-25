@@ -27,7 +27,7 @@ type FrontEndService struct {
 }
 
 const (
-	CurrentVersion = "0.2.1"
+	CurrentVersion = "0.3.1"
 )
 
 func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
@@ -141,6 +141,16 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
 	router.POST("/monitor_channels/", service.handleCreateChannel)
+
+	router.POST("/instances/:id/media", service.redirectToBackend)
+	router.DELETE("/instances/:id/media", service.redirectToBackend)
+
+	//snapshots
+	router.GET("/instances/:id/snapshots/", service.redirectToBackend)
+	router.POST("/instances/:id/snapshots/", service.redirectToBackend)
+	router.PUT("/instances/:id/snapshots/", service.redirectToBackend)
+	router.GET("/instances/:id/snapshots/:name", service.redirectToBackend)
+	router.DELETE("/instances/:id/snapshots/:name", service.redirectToBackend)
 }
 
 func (service *FrontEndService)defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
