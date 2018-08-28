@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.3.1] - 2018-8-25
+## [0.3.1] - 2018-8-28
 
 ### Added
 
@@ -11,6 +11,12 @@
 - Snapshot management: create/ delete / revert
 
 - Insert / eject media image
+
+### Changed
+
+- Enable instance funtions in instance monitor page
+
+- Change cpu/memory usage to bar chart in dashboard/instance monitor
 
 ## 2018-8-17
 
