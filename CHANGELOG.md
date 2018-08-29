@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.3.1] - 2018-8-28
+## [0.3.1] - 2018-8-29
 
 ### Added
 
@@ -17,6 +17,8 @@
 - Enable instance funtions in instance monitor page
 
 - Change cpu/memory usage to bar chart in dashboard/instance monitor
+
+- Open new tab for monitor/snapshots/details of instances list
 
 ## 2018-8-17
 

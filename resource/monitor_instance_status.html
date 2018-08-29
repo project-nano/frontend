@@ -436,11 +436,12 @@
         $('#instance-name').text(status['name']).prepend($('<i>').addClass('material-icons blue-grey-text darken-2').text('cloud_queue'));
         $('#instance-cores').text(status['cores']);
 
+        var operators = $('#instance-actions');
+
         if (running != status['running']){
           running = status['running'];
           //change
           $('#instance-icons').empty();
-          var operators = $('#instance-actions');
           operators.empty();
           if (running){
             $('#instance-icons').prepend(
@@ -476,6 +477,8 @@
                   $('<i>').addClass('material-icons').text('refresh')
                 )
             );
+            mediaAttached = status['media_attached'];
+            updateMediaStatus(instanceID, instanceName, running, mediaAttached, operators);
           }else{
             $('#instance-icons').prepend(
               $('<i>').addClass('material-icons red-text darken-2 tooltipped').attr('data-position', 'top').attr('data-tooltip', 'stopped').text('stop')
@@ -494,13 +497,13 @@
             );
             operators.append(
               $('<a>').attr('href', 'snapshots.html?pool=' + poolName + '&instance=' + instanceID).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                attr('data-tooltip','Snapshots').append(
+                attr('data-tooltip','Snapshots').attr('target', '_blank').append(
                   $('<i>').addClass('material-icons').text('photo_camera')
                 )
             );
             operators.append(
               $('<a>').attr('href', 'build_image.html?instance=' + instanceID).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                attr('data-tooltip','Build Disk Image').append(
+                attr('data-tooltip','Build Disk Image').attr('target', '_blank').append(
                   $('<i>').addClass('material-icons').text('cloud_upload')
                 )
             );
@@ -525,29 +528,7 @@
         if (mediaAttached != status['media_attached']){
           //attach status changed
           mediaAttached = status['media_attached'];
-          if (mediaAttached){
-            $('#instance-icons').append(
-              $('<i>').addClass('material-icons blue-grey-text tooltipped').attr('data-position', 'top').attr('data-tooltip', 'media attached').text('album').attr('id', 'media-icon')
-            );
-            if(running){
-              operators.append(
-                $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                  attr('data-tooltip','Eject media').attr('onclick', 'confirmEject("' + instanceName + '","' + instanceID + '")').append(
-                    $('<i>').addClass('material-icons').text('eject')
-                  )
-              );
-            }
-          }else{
-            $('i#media-icon').remove();
-            if(running){
-              operators.append(
-                $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                  attr('data-tooltip','Insert Media').attr('onclick', 'selectInsertMedia("' + instanceName + '","' + instanceID + '")').append(
-                    $('<i>').addClass('material-icons').text('arrow_drop_down')
-                  )
-              );
-            }
-          }
+          updateMediaStatus(instanceID, instanceName, running, mediaAttached, operators);
         }
         //Address
         if (status['internal']){
@@ -612,6 +593,38 @@
 
         M.Tooltip.init($('.tooltipped'));
       });
+    }
+
+    function updateMediaStatus(instanceID, instanceName, running, attached, operators){
+      const iconID = "media-icon";
+      const ejectID = "eject-btn";
+      const insertID = "insert-btn";
+      if (attached){
+        $('#instance-icons').append(
+          $('<i>').addClass('material-icons blue-grey-text tooltipped').attr('data-position', 'top')
+            .attr('data-tooltip', 'media attached').text('album').attr('id', iconID)
+        );
+        if(running){
+          $('#' + insertID).remove();
+          operators.append(
+            $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'top').attr('id', ejectID).
+              attr('data-tooltip','Eject media').attr('onclick', 'confirmEject("' + instanceName + '","' + instanceID + '")').append(
+                $('<i>').addClass('material-icons').text('eject')
+              )
+          );
+        }
+      }else{
+        $('#' + iconID).remove();
+        if(running){
+          $('#' + ejectID).remove();
+          operators.append(
+            $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'top').attr('id', insertID).
+              attr('data-tooltip','Insert Media').attr('onclick', 'selectInsertMedia("' + instanceName + '","' + instanceID + '")').append(
+                $('<i>').addClass('material-icons').text('arrow_drop_down')
+              )
+          );
+        }
+      }
     }
 
     function startInstance(name, id) {

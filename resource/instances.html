@@ -329,13 +329,13 @@
               );
               operators.append(
                 $('<a>').attr('href', 'snapshots.html?pool=' + poolName + '&instance=' + instanceID).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                  attr('data-tooltip','Snapshots').append(
+                  attr('data-tooltip','Snapshots').attr('target', '_blank').append(
                     $('<i>').addClass('material-icons').text('photo_camera')
                   )
               );
               operators.append(
                 $('<a>').attr('href', 'build_image.html?instance=' + instanceID).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                  attr('data-tooltip','Build Disk Image').append(
+                  attr('data-tooltip','Build Disk Image').attr('target', '_blank').append(
                     $('<i>').addClass('material-icons').text('cloud_upload')
                   )
               );
@@ -363,13 +363,13 @@
             }
             operators.append(
               $('<a>').attr('href', monitorUrl).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                attr('data-tooltip','Monitor').append(
+                attr('data-tooltip','Monitor').attr('target', '_blank').append(
                   $('<i>').addClass('material-icons').text('show_chart')
                 )
             );
             operators.append(
               $('<a>').attr('href', detailURL).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
-                attr('data-tooltip','Details').append(
+                attr('data-tooltip','Details').attr('target', '_blank').append(
                   $('<i>').addClass('material-icons').text('settings')
                 )
             );
