@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.4.1] - 2018-9-21
+
+### Added
+
+- Support storage pool management
+
+- Modify compute pool
+
+- Get compute cell info
+
 ## [0.3.1] - 2018-8-29
 
 ### Added

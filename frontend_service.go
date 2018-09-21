@@ -27,7 +27,7 @@ type FrontEndService struct {
 }
 
 const (
-	CurrentVersion = "0.3.1"
+	CurrentVersion = "0.4.1"
 )
 
 func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
@@ -91,66 +91,96 @@ func (service *FrontEndService)Routine(){
 }
 
 func (service *FrontEndService)registerHandler(router *httprouter.Router){
+	const (
+		GET    = iota
+		POST
+		PUT
+		DELETE
+	)
+
+	var redirect = func(r *httprouter.Router, path string, method int) {
+		switch method {
+		case GET:
+			r.GET(path, service.redirectToBackend)
+		case POST:
+			r.POST(path, service.redirectToBackend)
+		case PUT:
+			r.PUT(path, service.redirectToBackend)
+		case DELETE:
+			r.DELETE(path, service.redirectToBackend)
+		default:
+			log.Printf("<frontend> define redirect fail, invalid method %d", method)
+		}
+	}
+
 	router.GET("/", service.defaultLandingPage)
-	//API
-	router.GET("/instances/:id", service.redirectToBackend)
-	router.POST("/instances/:id", service.redirectToBackend)
-	router.DELETE("/instances/:id", service.redirectToBackend)
-
-	router.GET("/guests/:id", service.redirectToBackend)
-	router.POST("/guests/", service.redirectToBackend)
-	router.DELETE("/guests/:id", service.redirectToBackend)
-	router.GET("/guest_search/*filepath", service.redirectToBackend)
-	router.PUT("/guest/:id/cores", service.redirectToBackend)
-	router.PUT("/guest/:id/memory", service.redirectToBackend)
-	router.PUT("/guest/:id/auth", service.redirectToBackend)
-	router.GET("/guest/:id/auth", service.redirectToBackend)
-	router.PUT("/guest/:id/disks/resize/:index", service.redirectToBackend)
-	router.PUT("/guest/:id/disks/shrink/:index", service.redirectToBackend)
-
-
-	router.GET("/compute_zone_status/", service.redirectToBackend)
-	router.GET("/compute_pool_status/", service.redirectToBackend)
-	router.GET("/compute_pool_status/:pool", service.redirectToBackend)
-	router.GET("/compute_cell_status/:pool", service.redirectToBackend)
-	router.GET("/compute_cell_status/:pool/:cell", service.redirectToBackend)
-	router.GET("/instance_status/:pool", service.redirectToBackend)
-	router.GET("/instance_status/:pool/:cell", service.redirectToBackend)
-
-	router.GET("/compute_pools/", service.redirectToBackend)
-	router.GET("/compute_pools/:pool", service.redirectToBackend)
-	router.POST("/compute_pools/:pool", service.redirectToBackend)
-	router.DELETE("/compute_pools/:pool", service.redirectToBackend)
-	router.GET("/compute_pool_cells/", service.redirectToBackend)
-	router.GET("/compute_pool_cells/:pool", service.redirectToBackend)
-	router.POST("/compute_pool_cells/:pool/:cell", service.redirectToBackend)
-	router.DELETE("/compute_pool_cells/:pool/:cell", service.redirectToBackend)
-
-
-	router.GET("/media_images/", service.redirectToBackend)
-	router.POST("/media_images/", service.redirectToBackend)
-	router.DELETE("/media_images/:id", service.redirectToBackend)
-	router.POST("/media_image_files/:id", service.redirectToBackend)
-
-	router.GET("/disk_image_search/*filepath", service.redirectToBackend)
-	router.GET("/disk_images/:id", service.redirectToBackend)
-	router.POST("/disk_images/", service.redirectToBackend)
-	router.DELETE("/disk_images/:id", service.redirectToBackend)
-	router.GET("/disk_image_files/:id", service.redirectToBackend)
-	router.POST("/disk_image_files/:id", service.redirectToBackend)
-
 	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
 	router.POST("/monitor_channels/", service.handleCreateChannel)
 
-	router.POST("/instances/:id/media", service.redirectToBackend)
-	router.DELETE("/instances/:id/media", service.redirectToBackend)
+	//API
+	redirect(router, "/instances/:id", GET)
+	redirect(router, "/instances/:id", POST)
+	redirect(router, "/instances/:id", DELETE)
 
-	//snapshots
-	router.GET("/instances/:id/snapshots/", service.redirectToBackend)
-	router.POST("/instances/:id/snapshots/", service.redirectToBackend)
-	router.PUT("/instances/:id/snapshots/", service.redirectToBackend)
-	router.GET("/instances/:id/snapshots/:name", service.redirectToBackend)
-	router.DELETE("/instances/:id/snapshots/:name", service.redirectToBackend)
+	redirect(router, "/guests/:id", GET)
+	redirect(router, "/guests/", POST)
+	redirect(router, "/guests/:id", DELETE)
+
+	redirect(router, "/guest_search/*filepath", GET)
+	redirect(router, "/guest/:id/cores", PUT)
+	redirect(router, "/guest/:id/memory", PUT)
+	redirect(router, "/guest/:id/auth", PUT)
+	redirect(router, "/guest/:id/auth", GET)
+	redirect(router, "/guest/:id/disks/resize/:index", PUT)
+	redirect(router, "/guest/:id/disks/shrink/:index", PUT)
+
+	redirect(router, "/compute_zone_status/", GET)
+	redirect(router, "/compute_pool_status/", GET)
+	redirect(router, "/compute_pool_status/:pool", GET)
+	redirect(router, "/compute_cell_status/:pool", GET)
+	redirect(router, "/compute_cell_status/:pool/:cell", GET)
+	redirect(router, "/instance_status/:pool", GET)
+	redirect(router, "/instance_status/:pool/:cell", GET)
+
+	redirect(router, "/compute_pools/", GET)
+	redirect(router, "/compute_pools/:pool", GET)
+	redirect(router, "/compute_pools/:pool", POST)
+	redirect(router, "/compute_pools/:pool", PUT)
+	redirect(router, "/compute_pools/:pool", DELETE)
+	redirect(router, "/compute_pool_cells/", GET)
+	redirect(router, "/compute_pool_cells/:pool", GET)
+	redirect(router, "/compute_pool_cells/:pool/:cell", GET)
+	redirect(router, "/compute_pool_cells/:pool/:cell", POST)
+	redirect(router, "/compute_pool_cells/:pool/:cell", DELETE)
+
+	//storage pools
+	redirect(router, "/storage_pools/", GET)
+	redirect(router, "/storage_pools/:pool", GET)
+	redirect(router, "/storage_pools/:pool", POST)
+	redirect(router, "/storage_pools/:pool", PUT)
+	redirect(router, "/storage_pools/:pool", DELETE)
+
+	redirect(router, "/media_images/", GET)
+	redirect(router, "/media_images/", POST)
+	redirect(router, "/media_images/:id", DELETE)
+	redirect(router, "/media_image_files/:id", POST)
+
+	redirect(router, "/disk_image_search/*filepath", GET)
+	redirect(router, "/disk_images/:id", GET)
+	redirect(router, "/disk_images/", POST)
+	redirect(router, "/disk_images/:id", DELETE)
+	redirect(router, "/disk_image_files/:id", GET)
+	redirect(router, "/disk_image_files/:id", POST)
+
+	redirect(router, "/instances/:id/media", POST)
+	redirect(router, "/instances/:id/media", DELETE)
+
+	redirect(router, "/instances/:id/snapshots/", GET)
+	redirect(router, "/instances/:id/snapshots/", POST)
+	redirect(router, "/instances/:id/snapshots/", PUT)
+	redirect(router, "/instances/:id/snapshots/:name", GET)
+	redirect(router, "/instances/:id/snapshots/:name", DELETE)
+
 }
 
 func (service *FrontEndService)defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
