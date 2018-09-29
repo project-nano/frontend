@@ -1,6 +1,6 @@
 FORMAT: 1A
 
-# Amoeba API
+# Nano API
 
 REST API provided by core service
 
@@ -13,7 +13,7 @@ manage compute pool
 + Parameters
   + pool (string, optional) - pool name/id
 
-### Get all pools in zone [GET]
+### Get all pools in zone [GET /compute_pools/]
 
 query all compute pool info in zone
 
@@ -42,7 +42,7 @@ query all compute pool info in zone
     }
   ]
 
-### Query Pool Info [GET /compute_pools/{pool}]
+### Query Pool Info [GET]
 
 query compute pool details
 
@@ -68,7 +68,7 @@ create new compute pool
 
 + Attributes
   + cells(array[string], optional) - list of initial cell names
-  + network_mode (enum[string]) - plain/share/mono
+  + network_mode (enum[string], optional) - plain/share/mono
   + storage (string, optional) - attached storage pool name
   + addresses (string, optional) - attached address pool name
 
@@ -88,23 +88,34 @@ create new compute pool
 
 delete compute pool
 
-### Change Compute Pool Status [PUT]
+### Modify Compute Pool [PUT]
+
+modify compute pool config
 
 + Attributes
 
-  + name(string, optional) - new cell names
-  + enable(boolean, required) - set pool enable/disable
+  + enable(boolean, optional) - set pool enable/disable
+  + network_mode (enum[string], optional) - plain/share/mono
+  + storage (string, optional) - attached storage pool name
+  + addresses (string, optional) - attached address pool name
 
 + Request change compute pool (application/json)
 
   [
     {
-      "enable": false
+      "enable": false,
+      "storage": "nfs-poo1"
     }
   ]
 
 
-## Compute Pool Cell [/compute_pool_cells/{pool}]
+## Compute Pool Cell [/compute_pool_cells/{pool}/{cell}]
+
+
++ Parameters
+
+  + pool (string, optional) - pool name
+  + cell (string, optional) - cell name
 
 ### Query unallocated cells [GET /compute_pool_cells/]
 
@@ -135,10 +146,6 @@ query cells not attached to any pool
 
 ### Query cells in pool [GET /compute_pool_cells/{pool}]
 
-+ Parameters
-
-  + pool (string) - pool name
-
 + Response 200 (application/json)
 
   [
@@ -162,19 +169,123 @@ query cells not attached to any pool
     }
   ]
 
-### Add Pool Cell [POST /compute_pool_cells/{pool}/{cell}]
+### Add Pool Cell [POST]
 
-+ Parameters
+Add {cell} to {pool}
 
-  + pool (string) - pool name
-  + cell (string) - cell name
+### Remove Pool Cell [DELETE]
 
-### Remove Pool Cell [DELETE /compute_pool_cells/{pool}/{cell}]
+### Get Cell Config [GET]
 
-+ Parameters
++ Response 200 (application/json)
 
-  + pool (string) - pool name
-  + cell (string) - cell name
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+        "name": "cell1",
+        "address": "172.16.4.7",
+        "enabled": true,
+        "alive": true,
+        "storage": [
+        {
+          "name": "nfspool1",
+          "attached": true
+        },
+        {
+          "name": "cephpool1",
+          "attached": false,
+          "error": "not support yet"
+        }
+        ]
+      }
+    }
+  ]
+
+## Storage Pool [/storage_pools/{pool}]
+
+### Query Storage Pool [GET /storage_pools/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "nfspool1",
+          "type": "nfs",
+          "host": "nfs.nano.com",
+          "target": "/var/nano/pool1"
+        },
+        {
+          "name": "cephpool1",
+          "type": "ceph",
+          "host": "ceph.nano.com",
+          "target": "some_pool_in_ceph"
+         }
+      ]
+    }
+  ]
+
+
+### Get Storage Pool Info [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data": {
+        "type": "nfs",
+        "host": "nfs.nano.com",
+        "target": "/var/nano/pool1"
+      }
+    }
+  ]
+
+### Create Storage Pool [POST]
+
+Create a new stoarge pool
+
++ Attributes
+  + type (string) - storage type
+  + host (string, optional) - ip or hostname of pool target
+  + target (string, optional) - pool targe path
+
++ Request create storage pool (application/json)
+
+  [
+    {
+      "type": "nfs",
+      "host": "nfs.nano.com",
+      "target": "/var/nano/pool1"
+    }
+  ]
+
+### Modify Storage Pool [PUT]
+
+Modify stoarge pool, only empty pool allowed(no volumes available)
+
++ Attributes
+  + type (string) - storage type
+  + host (string, optional) - ip or hostname of pool target
+  + target (string, optional) - pool targe path
+
++ Request create storage pool (application/json)
+
+  [
+    {
+      "type": "nfs",
+      "host": "another_nfs.nano.com",
+      "target": "/var/nano/new_location"
+    }
+  ]
+
+### Delete Storage Pool [DELETE]
 
 ## Compute Zone Status [/compute_zone_status/]
 

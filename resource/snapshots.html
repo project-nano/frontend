@@ -2,7 +2,7 @@
 <html>
 <head>
     <!--Import Google Icon Font-->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/material-icons.css"/>
     <!--Import materialize.css-->
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
     <title>Instance Snapshots</title>
@@ -269,6 +269,7 @@
           extendTreeNode(root, container, 0);
           selectSnapshot(currentSnapshot);
           $('input:radio[value="' + currentSnapshot +'"]').prop('checked', true);
+          $('.material-tooltip').remove();
           M.Tooltip.init($('.tooltipped'));
         }
       );

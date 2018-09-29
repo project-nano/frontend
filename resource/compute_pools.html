@@ -2,7 +2,7 @@
 <html>
 <head>
     <!--Import Google Icon Font-->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/material-icons.css"/>
     <!--Import materialize.css-->
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
     <title>Compute Pools</title>
@@ -98,7 +98,7 @@
     }
 
     function outputMessage(message){
-      $('#pool_list').append(
+      $('#pool_list').empty().append(
         $('<div>').addClass('center').append(
           $('<span>').text(message)
         )
@@ -210,7 +210,8 @@
               table.append(content)
             );
           });
-          $('#pool_list').append(container);
+          $('#pool_list').empty().append(container);
+          $('.material-tooltip').remove();
           M.Tooltip.init($('.tooltipped'));
         }
       );

@@ -2,7 +2,7 @@
 <html>
 <head>
     <!--Import Google Icon Font-->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/material-icons.css"/>
     <!--Import materialize.css-->
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
     <title>Compute Cells</title>
@@ -127,7 +127,7 @@
     }
 
     function outputMessage(message){
-      $('#cell_list').append(
+      $('#cell_list').empty().append(
         $('<div>').addClass('center').append(
           $('<span>').text(message)
         )
@@ -142,6 +142,7 @@
             outputMessage(result['message']);
             return;
           }
+          $('#cell_list').empty();
           if (0 == result['data'].length){
             outputMessage('no compute cell available');
             return;
@@ -229,7 +230,8 @@
               table.append(content)
             );
           });
-          $('#cell_list').empty().append(container);
+          $('#cell_list').append(container);
+          $('.material-tooltip').remove();
           M.Tooltip.init($('.tooltipped'));
         }
       );

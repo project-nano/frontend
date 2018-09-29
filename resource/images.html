@@ -2,7 +2,7 @@
 <html>
 <head>
     <!--Import Google Icon Font-->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="css/material-icons.css"/>
     <!--Import materialize.css-->
     <link type="text/css" rel="stylesheet" href="/css/materialize.min.css" media="screen,projection"/>
     <title>Disk Images</title>
@@ -117,7 +117,7 @@
     }
 
     function outputMessage(message){
-      $('#images_list').append(
+      $('#images_list').empty().append(
         $('<div>').addClass('center').append(
           $('<span>').text(message)
         )
@@ -169,6 +169,8 @@
               $('<p>').append(
                 $('<b>').text('Size').append(': ' + sizeString)
               )
+            ).append(
+              $('<p>').text('ID: ' + image['id'])
             );
             if (image.hasOwnProperty('create_time')){
               content.append(
@@ -203,7 +205,7 @@
                 )
             );
             container.append(
-              $('<div>').addClass('col m6').append(
+              $('<div>').addClass('col m4').append(
                 $('<div>').addClass('card').append(content).append(actions)
               )
             );

@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.4.1] - 2018-9-21
+## [0.4.1] - 2018-9-29
 
 ### Added
 
@@ -9,6 +9,22 @@
 - Modify compute pool
 
 - Get compute cell info
+
+- Standalone google materialize icons
+
+- Mark instance lost status when cell stop/disconnected
+
+- Add image id in list
+
+### Fixed
+
+- No response to click start or insert media button when no media available.
+
+- Auto fresh page become slower after a long time running
+
+- Deleted instance count in the dashboard
+
+- Output message without clear previous info in the list
 
 ## [0.3.1] - 2018-8-29
 
