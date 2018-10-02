@@ -5,7 +5,7 @@
     <link type="text/css" rel="stylesheet" href="css/material-icons.css"/>
     <!--Import materialize.css-->
     <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection"/>
-    <title>Add Compute Cell</title>
+    <title>Create Compute Pool</title>
 
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -35,20 +35,25 @@
 <div class="container">
   <div class="section">
     <div class="row">
+      <p><span class="flow-text">Create New Compute Pool</span>
+      </p>
+    </div>
+  </div>
+  <div class="section">
+    <div class="row">
       <div class="col m6 push-m2" id="main-panel">
         <div class="row">
-          <div class="input-field col m4">
-            <i class="material-icons prefix">blur_on</i>
-            <input type="text" id="pool-name" value="" placeholder="" readonly>
+          <div class="input-field col m5">
+            <input type="text" id="pool-name" placeholder="Compute pool name" class="validate">
             <label for="pool-name">Pool Name</label>
           </div>
         </div>
         <div class="row">
-          <div class="input-field col m7">
-              <i class="material-icons prefix">view_quilt</i>
-              <select name="cell" id="cell-options">
+          <div class="input-field col m6">
+              <select name="storage" id="pool-storage">
+                <option value="" selected>default (using local storage)</option>
               </select>
-              <label>New Cell</label>
+              <label>Storage</label>
           </div>
         </div>
       </div>
@@ -63,7 +68,7 @@
                       class="material-icons left">chevron_left</i>Back</a>
           </div>
           <div class="col m2 right" id="button">
-              <button class="waves-effect waves-light blue-grey lighten-2 btn" onclick="addCell()">Add
+              <button class="waves-effect waves-light blue-grey lighten-2 btn" onclick="createPool()">Create
                   <i class="material-icons right">add</i>
               </button>
           </div>
@@ -88,39 +93,37 @@
 <script type="text/javascript" src="js/materialize.min.js"></script>
 <script>
 M.AutoInit();
-var poolName;
-
-function parseQueryString(){
-  var url = window.location.search;
-  var queryParams = new Map();
-  var queryString = url.substring( url.indexOf('?') + 1 );
-  if (0 === queryString.length){
-    return queryParams;
-  }
-  var values = queryString.split("&");
-  values.forEach((value) => {
-    var p = value.split('=');
-    queryParams.set(p[0], p[1]);
-  });
-  return queryParams;
-}
 
 function loadOptions(){
-  $.getJSON("/compute_pool_cells/", function(result){
+
+  $.getJSON("/storage_pools/", function(result){
     if (0 != result['error_code']) {
-        M.toast({html: 'query unallocated cells fail:' + result['message']});
+        M.toast({html: 'query storage pools fail:' + result['message']});
         return;
     }
-    result['data'].forEach((cell) =>{
-      $('#cell-options').append(
-        $('<option>').attr('value', cell['name']).text(cell['name'] + '('+ cell['address'] +')')
+    result['data'].forEach((storage) =>{
+      $('#pool-storage').append(
+        $('<option>').attr('value', storage['name']).text(storage['name'] + ' ('+ storage['type'] +')')
       )
     });
-    M.FormSelect.init($('#cell-options'));
+    M.FormSelect.init($('#pool-storage'));
   });
 }
-function addCell(){
-  var cellName = $('#cell-options').val();
+
+function createPool(){
+  var poolName = $('#pool-name').val();
+  var poolStorage = $('#pool-storage').val();
+  if (!poolName){
+    M.toast({html: "please input pool name"});
+    return;
+  }
+
+  var request = new Object();
+  request.storage = poolStorage;
+
+  if ('' == poolStorage){
+    poolStorage = "local storage";
+  }
 
   $('#button').empty();
   $('#main-panel').empty();
@@ -134,9 +137,9 @@ function addCell(){
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('Cell')
+      $('<td>').text('Storage')
     ).append(
-      $('<td>').text(cellName)
+      $('<td>').text(poolStorage)
     )
   ).append(
     $('<tr>').append(
@@ -147,9 +150,10 @@ function addCell(){
   );
   $('#main-panel').append(table);
 
+
   $.post(
-    '/compute_pool_cells/'+ poolName + '/' + cellName,
-    "",
+    '/compute_pools/'+ poolName,
+    JSON.stringify(request),
     function(result){
       if (0 != result['error_code']) {
         $('#request-result').text(result['message']);
@@ -157,7 +161,7 @@ function addCell(){
       }
       $('#request-result').text('success');
       $('#button').append(
-        $('<a>').attr('href', '/compute_cells.html?pool=' + poolName).append(
+        $('<a>').attr('href', 'compute_pools.html').append(
           $('<button>').addClass('waves-effect waves-light blue-grey lighten-2 btn').text('Finish').prepend(
             $('<i>').addClass('material-icons').text('check')
           )
@@ -170,13 +174,6 @@ function addCell(){
 }
 
 $(function(){
-  var params = parseQueryString();
-  if (!params.has('pool')){
-    M.toast({html: 'must specify pool name'})
-    return;
-  }
-  poolName = params.get('pool');
-  $('#pool-name').val(poolName);
   loadOptions();
 });
 

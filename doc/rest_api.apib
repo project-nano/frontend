@@ -28,14 +28,14 @@ query all compute pool info in zone
           "name": "default",
           "enabled": true
           "cells": 10,
-          "strorage": "some_ceph_cluster",
+          "storage": "some_ceph_cluster",
           "network": "nat_address_pool_1"
         },
         {
           "name": "fast_instance",
           "enabled": true
           "cells": 12,
-          "strorage": "some_ceph_cluster",
+          "storage": "some_ceph_cluster",
           "network": "nat_address_pool_1"
         }
       ]
@@ -56,7 +56,7 @@ query compute pool details
         "name": "default",
         "enabled": true,
         "cells": 10,
-        "strorage": "some_ceph_cluster",
+        "storage": "some_ceph_cluster",
         "network": "nat_address_pool_1"
       }
     }
@@ -79,7 +79,7 @@ create new compute pool
     {
       "cells":["cell1", "cell2"],
       "network_mode": "share",
-      "strorage": "some_ceph_cluster",
+      "storage": "some_ceph_cluster",
       "addresses": "nat_address_pool_1"
     }
   ]
