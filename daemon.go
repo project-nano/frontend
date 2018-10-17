@@ -35,9 +35,10 @@ func (service *MainService)Start() (output string, err error){
 	if err = service.frontend.Start();err != nil{
 		return
 	}
-	output = fmt.Sprintf("Front-End Module %s\nlisten at '%s', forward to '%s'\n",
+	output = fmt.Sprintf("Front-End Module %s\nCore API: %s\nNano Web Portal: http://%s\n",
 		service.frontend.GetVersion(),
-		service.frontend.GetListenAddress(), service.frontend.GetBackendURL())
+		service.frontend.GetBackendURL(),
+		service.frontend.GetListenAddress())
 	return
 }
 

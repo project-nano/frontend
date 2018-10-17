@@ -11,27 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
 </head>
-
 <body>
-
-<nav class="blue-grey ">
-    <div class="container">
-        <div class="nav-wrapper">
-            <a href="#" class="brand-logo">Nano</a>
-            <ul id="nav-mobile" class="right">
-                <li class="hide-on-small-only"><a href="dashboard.html"><i class="material-icons left">multiline_chart</i>Dashboard</a></li>
-                <li class="hide-on-small-only"><a href="compute_pools.html"><i class="material-icons left">blur_on</i>Resource Pool</a></li>
-                <li class="hide-on-small-only"><a href="storages.html"><i class="material-icons left">storage</i>Storage</a></li>
-                <li class="hide-on-small-only"><a href="instances.html"><i class="material-icons left">cloud</i>Instances</a></li>
-                <li class="hide-on-small-only"><a href="images.html"><i class="material-icons left">content_copy</i>Images</a></li>
-                <li class="hide-on-small-only"><a href="medias.html"><i class="material-icons left">album</i>Medias</a></li>
-                <li class="hide-on-small-only"><a href="#"><i class="material-icons left">people</i>Users</a></li>
-                <li class="hide-on-med-and-up"><a href="#"><i class="material-icons right">menu</i>Menu</a></li>
-            </ul>
-
-        </div>
-    </div>
-</nav>
 <div class="container">
     <div class="section">
         <div class="row">
@@ -42,7 +22,7 @@
                         <div class="input-field col m4">
                             <i class="material-icons prefix">create</i>
                             <input id="instance_name" type="text" class="validate" name="name" required>
-                            <label for="instance_name">Instance Name</label>
+                            <label for="instance_name" id="name-label"></label>
                         </div>
                     </div>
                     <div class="row">
@@ -50,13 +30,13 @@
                             <i class="material-icons prefix">blur_on</i>
                             <select name="pool" id="pool-options">
                             </select>
-                            <label>Compute Pool</label>
+                            <label id="pool-label"></label>
                         </div>
                     </div>
                     <div class="row">
                         <div class="input-field">
                             <div class="col m2">
-                                <label>Cores</label>
+                                <label id="core-label"></label>
                             </div>
                             <div class="col m1">
                                 <label>
@@ -87,7 +67,7 @@
                     <div class="row">
                         <div class="input-field">
                             <div class="col m2">
-                                <label>Memory</label>
+                                <label id="memory-label"></label>
                             </div>
                             <div class="col m1">
                                 <label>
@@ -124,7 +104,7 @@
                     <div class="row">
                         <div class="input-field">
                             <div class="col m2">
-                                <label>System</label>
+                                <label id="system-label"></label>
                             </div>
                             <div class="col m1">
                                 <label>
@@ -143,7 +123,7 @@
                     <div class="row">
                         <div class="input-field">
                             <div class="col m2">
-                                <label>System Disk</label>
+                                <label id="system-disk-label"></label>
                             </div>
                             <div class="col m1">
                                 <label>
@@ -169,15 +149,15 @@
                         <div class="input-field col m3 push-m2">
                             <i class="material-icons prefix">laptop_chromebook</i>
                             <select name="from_image" id="image-options" onchange="onImageChanged()">
-                                <option value="">Blank System</option>
+                                <option value="" id="blank-system-label"></option>
                             </select>
-                            <label>System Image</label>
+                            <label id="system-image-label"></label>
                         </div>
                     </div>
                     <div class="row" id="data-input">
                         <div class="input-field">
                             <div class="col m2">
-                                <label>Data Disk</label>
+                                <label id="data-disk-label"></label>
                             </div>
                             <div class="col m1">
                                 <label>
@@ -213,14 +193,14 @@
                     </div>
                     <div class="row">
                         <div class="col m2">
-                            <label>AutoStart</label>
+                            <label id="auto-start-label"></label>
                         </div>
                         <div class="switch">
-                            <label>
-                                Disabled
+                            <label id="auto-start-switch">
+                                <!-- Disabled
                                 <input type="checkbox" checked="checked" name="auto_start" value="true" id="auto_start">
                                 <span class="lever"></span>
-                                Enabled
+                                Enabled -->
                             </label>
                         </div>
                     </div>
@@ -245,35 +225,50 @@
     <div class="section">
         <div class="row">
             <div class="col m2">
-                <a class="waves-effect waves-light blue-grey lighten-2 btn" onclick="window.history.back()"><i
-                        class="material-icons left">chevron_left</i>Back</a>
+                <a class="waves-effect waves-light blue-grey lighten-2 btn" onclick="window.history.back()" id="back-caption"><i
+                        class="material-icons left">chevron_left</i></a>
             </div>
             <div class="col m2 right" id="button">
                 <button class="waves-effect waves-light blue-grey lighten-2 btn modal-trigger"
-                        data-target="confirm_modal">Create
+                        data-target="confirm_modal" id="create-caption">
                     <i class="material-icons right">add</i>
                 </button>
             </div>
         </div>
     </div>
 </div>
-<footer class="page-footer  blue-grey darken-3">
-    <div class="container">
-        <!-- <div class="col s6 m2">
-          <h4>Help</h4>
-        </div> -->
-    </div>
-    <div class="footer-copyright">
-        <div class="container">
-            © 2018 Copyright Project Nano. All rights reserved.
-        </div>
-    </div>
-</footer>
 
 <!--JavaScript at end of body for optimized loading-->
 <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
 <script type="text/javascript" src="js/materialize.min.js"></script>
+<script type="text/javascript" src="js/nano.js"></script>
 <script>
+N.CreateMenuAndFooter();
+var texts = N.GetTexts();
+$('#back-caption').append(texts.get(N.TagBack));
+$('#create-caption').prepend(texts.get(N.TagCreate));
+$('.modal-footer > a:first-child').text(texts.get(N.TagCancel));
+$('.modal-footer > a:last-child').text(texts.get(N.TagConfirm));
+
+$('#name-label').text(texts.get(N.TagName));
+$('#pool-label').text(texts.get(N.TagComputePool));
+$('#core-label').text(texts.get(N.TagCore));
+$('#memory-label').text(texts.get(N.TagMemory));
+$('#system-label').text(texts.get(N.TagSystem));
+$('#system-disk-label').text(texts.get(N.TagSystemDisk));
+$('#system-image-label').text(texts.get(N.TagSystemImage));
+$('#blank-system-label').text(texts.get(N.TagBlankSystem));
+$('#data-disk-label').text(texts.get(N.TagDataDisk));
+$('#auto-start-label').text(texts.get(N.TagAutoStart));
+
+$('#auto-start-switch').append(
+  $('<label>').append(texts.get(N.TagDisable)).append(
+    $('<input>').attr('type', 'checkbox').attr('name', 'auto_start').attr('id', 'auto_start').prop('checked', true)
+  ).append(
+    $('<span>').addClass('lever')
+  ).append(texts.get(N.TagEnable))
+)
+
 M.AutoInit();
 
 function loadOptions(){
@@ -329,7 +324,7 @@ function finishCreate(){
   }
   $('#button').append(
     $('<a>').attr('href', finishPage).append(
-      $('<button>').addClass('waves-effect waves-light blue-grey lighten-2 btn').text('Finish').prepend(
+      $('<button>').addClass('waves-effect waves-light blue-grey lighten-2 btn').text(texts.get(N.TagFinish)).prepend(
         $('<i>').addClass('material-icons').text('check')
       )
     )
@@ -410,37 +405,37 @@ function createGuest(request){
   var table = $('<table>').addClass('striped');
   table.append(
     $('<tr>').append(
-      $('<td>').text('Name')
+      $('<td>').text(texts.get(N.TagName))
     ).append(
       $('<td>').text(request.name)
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('Pool')
+      $('<td>').text(texts.get(N.TagComputePool))
     ).append(
       $('<td>').text(request.pool)
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('Cores')
+      $('<td>').text(texts.get(N.TagCore))
     ).append(
       $('<td>').text(request.cores)
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('Memory')
+      $('<td>').text(texts.get(N.TagMemory))
     ).append(
       $('<td>').text((request.memory / ( 1 << 20 ) ) + ' MiB')
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('Disks')
+      $('<td>').text(texts.get(N.TagDisk))
     ).append(
       $('<td>').text(disks.join(' / ') + ' GiB')
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('System')
+      $('<td>').text(texts.get(N.TagSystem))
     ).append(
       $('<td>').text(request.system)
     )
@@ -448,7 +443,7 @@ function createGuest(request){
   if (request.from_image){
     table.append(
       $('<tr>').append(
-        $('<td>').text('Image')
+        $('<td>').text(texts.get(N.TagImage))
       ).append(
         $('<td>').text(request.from_image)
       )
@@ -457,17 +452,17 @@ function createGuest(request){
   if (request.auto_start){
     table.append(
       $('<tr>').append(
-        $('<td>').text('AutoStart')
+        $('<td>').text(texts.get(N.TagAutoStart))
       ).append(
-        $('<td>').text('Enabled')
+        $('<td>').text(texts.get(N.TagEnable))
       )
     );
   }else{
     table.append(
       $('<tr>').append(
-        $('<td>').text('AutoStart')
+        $('<td>').text(texts.get(N.TagAutoStart))
       ).append(
-        $('<td>').text('Disabled')
+        $('<td>').text(texts.get(N.TagDisable))
       )
     );
   }
@@ -479,7 +474,7 @@ function createGuest(request){
     )
   ).append(
     $('<tr>').append(
-      $('<td>').text('Result')
+      $('<td>').text(texts.get(N.TagResult))
     ).append(
       $('<td>').attr('id', 'create-result')
     )

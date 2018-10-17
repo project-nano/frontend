@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.5.1] - 2018-10-17
+
+### Added
+
+- Multi-language support
+
+- Enable/Disable cell
+
+### Changed
+
+- Optimize console output when starting module
+
 ## [0.4.1] - 2018-10-2
 
 ### Added

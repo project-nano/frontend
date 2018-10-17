@@ -26,17 +26,19 @@ query all compute pool info in zone
       "data":[
         {
           "name": "default",
-          "enabled": true
+          "enabled": true,
           "cells": 10,
           "storage": "some_ceph_cluster",
-          "network": "nat_address_pool_1"
+          "network": "nat_address_pool_1",
+          "failover": true
         },
         {
           "name": "fast_instance",
           "enabled": true
           "cells": 12,
           "storage": "some_ceph_cluster",
-          "network": "nat_address_pool_1"
+          "network": "nat_address_pool_1",
+          "failover": false
         }
       ]
     }
@@ -57,7 +59,8 @@ query compute pool details
         "enabled": true,
         "cells": 10,
         "storage": "some_ceph_cluster",
-        "network": "nat_address_pool_1"
+        "network": "nat_address_pool_1",
+        "failover": true
       }
     }
   ]
@@ -71,6 +74,7 @@ create new compute pool
   + network_mode (enum[string], optional) - plain/share/mono
   + storage (string, optional) - attached storage pool name
   + addresses (string, optional) - attached address pool name
+  + failover (bool, optional) - enable failover
 
 
 + Request create compute pool (application/json)
@@ -80,7 +84,8 @@ create new compute pool
       "cells":["cell1", "cell2"],
       "network_mode": "share",
       "storage": "some_ceph_cluster",
-      "addresses": "nat_address_pool_1"
+      "addresses": "nat_address_pool_1",
+      "failover": true
     }
   ]
 
@@ -174,6 +179,22 @@ query cells not attached to any pool
 Add {cell} to {pool}
 
 ### Remove Pool Cell [DELETE]
+
+### Modify Pool Cell [PUT]
+
+modify compute pool config
+
++ Attributes
+
+  + enable(boolean, optional) - enable/disable cell
+
++ Request change compute pool (application/json)
+
+  [
+    {
+      "enable": false
+    }
+  ]
 
 ### Get Cell Config [GET]
 
