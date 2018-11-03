@@ -499,7 +499,7 @@
           autostart = status['auto_start'];
           if (autostart){
             $('#instance-icons').append(
-              $('<i>').addClass('material-icons light-blue-text tooltipped').attr('data-position', 'top').attr('data-tooltip',  texts.get(N.TagEnable)).text('all_inclusive').attr('id', 'autostart-icon')
+              $('<i>').addClass('material-icons light-blue-text tooltipped').attr('data-position', 'top').attr('data-tooltip', texts.get(N.TagAutoStart) + ' ' + texts.get(N.TagEnable)).text('all_inclusive').attr('id', 'autostart-icon')
             );
           }else{
             $('i#autostart-icon').remove();

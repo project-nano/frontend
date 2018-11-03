@@ -103,6 +103,29 @@
             <a href="#" class="modal-close waves-effect waves-green btn-flat" id="eject_confirm_link">Yes</a>
         </div>
     </div>
+    <div class="modal" id="migrate-modal">
+        <!--hide model -->
+        <div class="modal-content">
+            <h4>Migrate Instance</h4>
+            <div class="row">
+              <p id="migrate-content">
+              </p>
+              <input type="hidden" id="migrate-pool">
+              <input type="hidden" id="migrate-source">
+            </div>
+            <div class="row">
+              <div class="input-field col m4">
+                  <select name="migrate-target" id="migrate-target-options">
+                  </select>
+                  <label>Target Cell</label>
+              </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="modal-close waves-effect waves-green btn-flat"></a>
+            <a href="#" class="modal-close waves-effect waves-green btn-flat" id="migrate-confirm-link"></a>
+        </div>
+    </div>
 </div>
 
 <!--JavaScript at end of body for optimized loading-->
@@ -162,6 +185,9 @@
     }
 
     function loadInstances(){
+      if (!poolName){
+        return;
+      }
       var url = "/guest_search/?pool=" + poolName;
       if (cellName){
         url += "&cell=" + cellName;
@@ -172,6 +198,11 @@
           if (0 != result['error_code']) {
             outputMessage(result['message']);
             return;
+          }
+          if (!result['data']){
+            outputMessage('no instance available');
+            $('#instance_list').empty();
+            return
           }
           if (0 == result['data'].length){
             outputMessage('no instance available');
@@ -250,6 +281,7 @@
               );
             }
             else if (instance['running']){
+              //running
               status.append(
                 $('<i>').addClass('material-icons green-text darken-2 tooltipped').attr('data-position', 'top').
                   attr('data-tooltip', texts.get(N.TagRunning)).text('play_arrow')
@@ -304,6 +336,7 @@
                 );
               }
             }else{
+              //stopped
               status.append(
                   $('<i>').addClass('material-icons red-text darken-4 tooltipped').attr('data-position', 'top').
                     attr('data-tooltip', texts.get(N.TagStopped)).text('stop')
@@ -338,13 +371,19 @@
                     $('<i>').addClass('material-icons').text('delete')
                   )
               );
+              operators.append(
+                $('<a>').attr('href', '#').attr('onclick', 'confirmMigrate("' + instanceName + '","' + instanceID + '")').addClass('blue-grey-text tooltipped').attr('data-position', 'top').
+                  attr('data-tooltip', texts.get(N.TagMigrate)).append(
+                    $('<i>').addClass('material-icons').text('local_shipping')
+                  )
+              );
             }
 
             //auto_start
             if (instance['auto_start']){
               status.append(
                   $('<i>').addClass('material-icons green-text darken-2 tooltipped').attr('data-position', 'top').
-                    attr('data-tooltip', texts.get(N.TagEnabled)).text('all_inclusive')
+                    attr('data-tooltip', texts.get(N.TagAutoStart) + ' ' + texts.get(N.TagEnable)).text('all_inclusive')
                 );
             }
 
@@ -612,6 +651,111 @@
        }
       });
     }
+
+    //migrate instance
+    function confirmMigrate(name, id){
+      $('#migrate-confirm-link').attr('onclick', 'migrateInstance("' + name + '", "' + id +'")');
+      $.getJSON(
+        '/guests/' + id,
+        function(result){
+          if (0 != result['error_code']) {
+            M.toast({html: 'get instance config fail: ' + result['message']});
+            return;
+          }
+          if (!result['data']){
+            M.toast({html: 'no config available for instance "' + name + '"'});
+            return;
+          }
+          var config = result['data'];
+          var poolName = config['pool'];
+          var currentCell = config['cell'];
+          $.getJSON(
+            '/compute_pool_cells/' + poolName,
+            function(result){
+              if (0 != result['error_code']) {
+                M.toast({html: 'query cells fail: ' + result['message']});
+                return;
+              }
+              if (!result['data']){
+                M.toast({html: 'no cell available in pool "' + poolName + '"'});
+                return;
+              }
+              if (0 == result['data'].length){
+                M.toast({html: 'no cell available in pool "' + poolName + '"'});
+                return;
+              }
+              var options = $('#migrate-target-options').empty();
+              var currentAddress = "";
+              result['data'].forEach((cell)=>{
+                var cellName = cell['name'];
+                var displayText = cellName + '('+ cell['address']+')';
+                if (cellName == currentCell){
+                  currentAddress = displayText;
+                  return;
+                }
+                if (!cell['enabled']){
+                  options.append(
+                    $('<option>').attr('value', cellName).text(displayText + ' - Disabled').prop('disabled', true)
+                  );
+                }else if(!cell['alive']){
+                  options.append(
+                    $('<option>').attr('value', cellName).text(displayText + ' - Lost').prop('disabled', true)
+                  );
+                }else{
+                  options.append(
+                    $('<option>').attr('value', cellName).text(displayText)
+                  );
+                }
+              });
+              M.FormSelect.init($('#migrate-target-options'));
+              if (currentAddress){
+                $('#migrate-content').text('Migrate instance "' + name + '" from "' + currentAddress + '" to');
+              }else{
+                $('#migrate-content').text('Migrate instance "' + name + '" from "' + currentCell + '" to');
+              }
+              $('#migrate-pool').val(poolName);
+              $('#migrate-source').val(currentCell);
+              var instance = M.Modal.getInstance($('#migrate-modal'));
+              instance.open();
+            }
+          );
+        }
+      );
+
+    }
+
+    function migrateInstance(name, id){
+      var poolName = $('#migrate-pool').val();
+      var sourceCell = $('#migrate-source').val();
+      var targetCell = $('#migrate-target-options').val();
+      if (!targetCell){
+        M.toast({html: "invalid target cell"});
+        return;
+      }
+      var request = new Object();
+      request.source_pool = poolName;
+      request.source_cell = sourceCell;
+      request.target_cell = targetCell;
+      request.instances = [id];
+      $.post(
+        '/migrations/',
+        JSON.stringify(request),
+        function(result){
+          if (0 != result['error_code']) {
+            M.toast({html: 'migrate instance fail: ' + result['message']});
+            return;
+          }
+          if (!result['data']){
+            M.toast({html: 'migrate summited, but no data available'});
+            return;
+          }
+          var migration = result['data'];
+          M.toast({html: 'try migrate "'+ name +'" to "'+targetCell+'"'});
+        },
+        "json"
+      );
+    }
+
 
     var intervalID;
     var refreshInterval = 5*1000;

@@ -31,6 +31,11 @@
               <label id="storage-label"></label>
           </div>
         </div>
+        <div class="row">
+          <span id="failover-label"></span>
+          <div class="switch" id="failover-div">
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -63,6 +68,14 @@ $('#create-caption').prepend(texts.get(N.TagCreate));
 
 $('#name-label').text(texts.get(N.TagName));
 $('#storage-label').text(texts.get(N.TagStoragePool));
+$('#failover-label').text(texts.get(N.TagFailover));
+$('#failover-div').append(
+  $('<label>').append(texts.get(N.TagOff)).append(
+    $('<input>').attr('type', 'checkbox').attr('id', 'failover-switch')
+  ).append(
+    $('<span>').addClass('lever')
+  ).append(texts.get(N.TagOn))
+);
 
 M.AutoInit();
 
@@ -96,6 +109,11 @@ function createPool(){
   if ('' == poolStorage){
     poolStorage = "local storage";
   }
+  request.failover = $('#failover-switch').prop('checked');
+  var failoverText = texts.get(N.TagDisable);
+  if (request.failover){
+    failoverText = texts.get(N.TagEnable);
+  }
 
   $('#button').empty();
   $('#main-panel').empty();
@@ -112,6 +130,12 @@ function createPool(){
       $('<td>').text(texts.get(N.TagStorage))
     ).append(
       $('<td>').text(poolStorage)
+    )
+  ).append(
+    $('<tr>').append(
+      $('<td>').text(texts.get(N.TagFailover))
+    ).append(
+      $('<td>').text(failoverText)
     )
   ).append(
     $('<tr>').append(

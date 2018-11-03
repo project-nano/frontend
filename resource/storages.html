@@ -92,6 +92,10 @@
             outputMessage(result['message']);
             return;
           }
+          if (!result['data']){
+            outputMessage('no storage pool available');
+            return
+          }
           if (0 == result['data'].length){
             outputMessage('no storage pool available');
             return;

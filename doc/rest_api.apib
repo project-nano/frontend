@@ -108,7 +108,7 @@ modify compute pool config
 
   [
     {
-      "enable": false,
+      "failover": true,
       "storage": "nfs-poo1"
     }
   ]
@@ -1428,3 +1428,97 @@ create channel for monitor and control instance. Create a new temporary channel 
     }
 
 ### Delete Disk Image [DELETE]
+
+# System Maintain
+
+## Migration [/migrations/{id}]
+
++ Parameters
+
+  + id (string, optional) - migration task id
+
+### Start Migration [POST]
+
++ Request Start Migration (application/json)
+
+  + Attributes
+
+    + source_pool (string) - pool of instance host
+    + source_cell (string) - cell of instance host
+    + target_pool (string, optional) - target pool you want to migrate
+    + target_cell (string, optional) - target cell you want to migrate
+    + instances (array[string], optional) - UUID list of instances need to migrate
+
+  + Body
+
+    {
+      "source_pool": "default",
+      "source_cell": "cell1",
+      "target_pool": "another-pool",
+      "target_cell": "new-cell",
+      "instances": ["jhfguf85-34uyf-4t4tghjh", "dfjui-euy37-dyuy3t5qn"]
+    }
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "id": "abcdef-1234567890"
+        }
+      ]
+    }
+  ]
+
+### Query Migration [GET]
+
++ Response 201 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "finished": false,
+        "progress": 57 //limit to 100
+      }
+    }
+  ]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "finished": true
+      }
+    }
+  ]
+
+### List All Migration in progress [GET /migrations/]
+
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+            "id": "1234567890-abcdef",
+            "finished": false,
+            "progress": 57 //limit to 100
+        },
+        {
+            "id": "1234567890-abcdef",
+            "finished": true
+        }
+      ]
+    }
+  ]

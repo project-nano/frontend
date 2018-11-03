@@ -58,6 +58,27 @@
             <a href="#" class="modal-close waves-effect waves-green btn-flat" id="confirm_link">Yes</a>
         </div>
     </div>
+    <div class="modal" id="migrate-modal">
+        <!--hide model -->
+        <div class="modal-content">
+            <h4>Migrate Instance</h4>
+            <div class="row">
+              <p id="migrate-content">
+              </p>
+            </div>
+            <div class="row">
+              <div class="input-field col m4">
+                  <select name="migrate-target" id="migrate-target-options">
+                  </select>
+                  <label>Target Cell</label>
+              </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#" class="modal-close waves-effect waves-green btn-flat"></a>
+            <a href="#" class="modal-close waves-effect waves-green btn-flat" id="migrate-confirm-link"></a>
+        </div>
+    </div>
 </div>
 
 <!--JavaScript at end of body for optimized loading-->
@@ -125,6 +146,10 @@
             return;
           }
           $('#cell_list').empty();
+          if (!result['data']){
+            outputMessage('no compute cell available');
+            return
+          }
           if (0 == result['data'].length){
             outputMessage('no compute cell available');
             return;
@@ -177,7 +202,7 @@
               );
               operators.append(
                 $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
-                  attr('data-tooltip', texts.get(N.TagDisable)).append(
+                  attr('data-tooltip', texts.get(N.TagDisable)).attr('onclick', 'disableCell("' + cell['name'] + '")').append(
                     $('<i>').addClass('material-icons').text('do_not_disturb')
                   )
               );
@@ -190,7 +215,7 @@
               );
               operators.append(
                 $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
-                  attr('data-tooltip', texts.get(N.TagEnable)).append(
+                  attr('data-tooltip', texts.get(N.TagEnable)).attr('onclick', 'enableCell("' + cell['name'] + '")').append(
                     $('<i>').addClass('material-icons').text('check')
                   )
               );
@@ -211,6 +236,12 @@
               $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
                 attr('data-tooltip', texts.get(N.TagRemove)).attr('onclick', 'confirmDelete("'+ cell['name'] +'")').append(
                   $('<i>').addClass('material-icons').text('delete')
+                )
+            );
+            operators.append(
+              $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
+                attr('data-tooltip', texts.get(N.TagMigrate)).attr('onclick', 'confirmMigrate("'+ cell['name'] +'")').append(
+                  $('<i>').addClass('material-icons').text('local_shipping')
                 )
             );
             content.append(operators);
@@ -248,9 +279,132 @@
       });
     }
 
-    function modifyCell(id) {
-        M.toast({html: 'todo: mofidy cell ' + id});
+    function disableCell(cellName) {
+      var request = new Object();
+      request.enable = false;
+      $.ajax({
+        url: '/compute_pool_cells/' + poolName + '/' + cellName,
+        method: "PUT",
+        dataType: "json",
+        data: JSON.stringify(request),
+        success: function (result) {
+            if (0 != result['error_code']) {
+                M.toast({html: 'disable cell fail: ' + result['message'], outDuration: 600});
+                return;
+            }
+            M.toast({html: cellName + ' disabled'});
+            setTimeout(refresh, 500);
+        },
+        error: function (jqXHR, status, error) {
+          M.toast({html: 'request disable cell fail: ' + error, outDuration: 600});
+        }
+      });
     }
+
+    function enableCell(cellName) {
+      var request = new Object();
+      request.enable = true;
+      $.ajax({
+        url: '/compute_pool_cells/' + poolName + '/' + cellName,
+        method: "PUT",
+        dataType: "json",
+        data: JSON.stringify(request),
+        success: function (result) {
+            if (0 != result['error_code']) {
+                M.toast({html: 'enable cell fail: ' + result['message'], outDuration: 600});
+                return;
+            }
+            M.toast({html: cellName + ' enabled'});
+            setTimeout(refresh, 500);
+        },
+        error: function (jqXHR, status, error) {
+          M.toast({html: 'request enable cell fail: ' + error, outDuration: 600});
+        }
+      });
+    }
+
+    //migrate instance
+    function confirmMigrate(sourceCell){
+      $('#migrate-confirm-link').attr('onclick', 'migrateInstance("' + sourceCell + '")');
+      $.getJSON(
+        '/compute_pool_cells/' + poolName,
+        function(result){
+          if (0 != result['error_code']) {
+            M.toast({html: 'query cells fail: ' + result['message']});
+            return;
+          }
+          if (!result['data']){
+            M.toast({html: 'no cell available in pool "' + poolName + '"'});
+            return;
+          }
+          if (0 == result['data'].length){
+            M.toast({html: 'no cell available in pool "' + poolName + '"'});
+            return;
+          }
+          var options = $('#migrate-target-options').empty();
+          var currentAddress = "";
+          result['data'].forEach((cell)=>{
+            var cellName = cell['name'];
+            var displayText = cellName + '('+ cell['address']+')';
+            if (cellName == sourceCell){
+              currentAddress = displayText;
+              return;
+            }
+            if (!cell['enabled']){
+              options.append(
+                $('<option>').attr('value', cellName).text(displayText + ' - Disabled').prop('disabled', true)
+              );
+            }else if(!cell['alive']){
+              options.append(
+                $('<option>').attr('value', cellName).text(displayText + ' - Lost').prop('disabled', true)
+              );
+            }else{
+              options.append(
+                $('<option>').attr('value', cellName).text(displayText)
+              );
+            }
+          });
+          M.FormSelect.init($('#migrate-target-options'));
+          if (currentAddress){
+            $('#migrate-content').text('Migrate all instances from "' + currentAddress + '" to');
+          }else{
+            $('#migrate-content').text('Migrate all instances from "' + sourceCell + '" to');
+          }
+          var instance = M.Modal.getInstance($('#migrate-modal'));
+          instance.open();
+        }
+      );
+    }
+
+    function migrateInstance(sourceCell){
+      var targetCell = $('#migrate-target-options').val();
+      if (!targetCell){
+        M.toast({html: "invalid target cell"});
+        return;
+      }
+      var request = new Object();
+      request.source_pool = poolName;
+      request.source_cell = sourceCell;
+      request.target_cell = targetCell;
+      $.post(
+        '/migrations/',
+        JSON.stringify(request),
+        function(result){
+          if (0 != result['error_code']) {
+            M.toast({html: 'migrate instance fail: ' + result['message']});
+            return;
+          }
+          if (!result['data']){
+            M.toast({html: 'migrate summited, but no data available'});
+            return;
+          }
+          var migration = result['data'];
+          M.toast({html: 'try migrate all instance(s) to "'+targetCell+'"'});
+        },
+        "json"
+      );
+    }
+
 
     var intervalID;
     var refreshInterval = 5*1000;

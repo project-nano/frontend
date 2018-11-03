@@ -29,6 +29,11 @@
               <label id="storage-label"></label>
           </div>
         </div>
+        <div class="row">
+          <span id="failover-label"></span>
+          <div class="switch" id="failover-div">
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -61,6 +66,14 @@ $('#modify-caption').prepend(texts.get(N.TagModify));
 
 $('#name-label').text(texts.get(N.TagName));
 $('#storage-label').text(texts.get(N.TagStoragePool));
+$('#failover-label').text(texts.get(N.TagFailover));
+$('#failover-div').append(
+  $('<label>').append(texts.get(N.TagOff)).append(
+    $('<input>').attr('type', 'checkbox').attr('id', 'failover-switch')
+  ).append(
+    $('<span>').addClass('lever')
+  ).append(texts.get(N.TagOn))
+);
 
 M.AutoInit();
 
@@ -92,6 +105,10 @@ function loadPoolConfig(){
       $('#pool-name').val(poolName);
       var pool = result['data'];
       var currentStorage = pool['storage'];
+      if (pool['failover']){
+        //enable
+        $('#failover-switch').prop('checked', true);
+      }
       $.getJSON(
         "/storage_pools/",
         function(result){
@@ -143,6 +160,11 @@ function modifyPool(){
   if ('' == poolStorage){
     poolStorage = "local storage";
   }
+  request.failover = $('#failover-switch').prop('checked');
+  var failoverText = texts.get(N.TagDisable);
+  if (request.failover){
+    failoverText = texts.get(N.TagEnable);
+  }
 
   $('#button').empty();
   $('#main-panel').empty();
@@ -159,6 +181,12 @@ function modifyPool(){
       $('<td>').text(texts.get(N.TagStorage))
     ).append(
       $('<td>').text(poolStorage)
+    )
+  ).append(
+    $('<tr>').append(
+      $('<td>').text(texts.get(N.TagFailover))
+    ).append(
+      $('<td>').text(failoverText)
     )
   ).append(
     $('<tr>').append(

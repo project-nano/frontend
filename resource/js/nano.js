@@ -112,6 +112,8 @@ N.TagSystem = "system";
 N.TagSystemImage = "system_image";
 N.TagBlankSystem = "blank_system";
 N.TagAutoStart = "auto_start";
+N.TagSystemVersion = "system_version";
+N.TagInstalledModule = "installed_module";
 
 N.TagPassword = "password";
 N.TagMonitorAddress = "monitor_address";
@@ -134,6 +136,7 @@ N.TagTag = "tag";
 N.TagImageName = "image_name";
 N.TagImageFile = "image_file";
 N.TagSelect = "select";
+N.TagFailover = "failover";
 
 //Language name
 N.zh_CN = "zh_CN";
@@ -237,7 +240,10 @@ var zh_CN_text = new TextSet(new Map([
   [N.TagTag, "标签"],
   [N.TagImageName, "镜像名称"],
   [N.TagImageFile, "镜像文件"],
-  [N.TagSelect, "选择"]
+  [N.TagSelect, "选择"],
+  [N.TagFailover, "故障切换"],
+  [N.TagSystemVersion, "系统版本"],
+  [N.TagInstalledModule, "预装模块"]
 ]));
 
 var en_US_text = new TextSet(new Map([
@@ -338,7 +344,10 @@ var en_US_text = new TextSet(new Map([
   [N.TagTag, "Tag"],
   [N.TagImageName, "Image Name"],
   [N.TagImageFile, "Image File"],
-  [N.TagSelect, "Select"]
+  [N.TagSelect, "Select"],
+  [N.TagFailover, "Failover"],
+  [N.TagSystemVersion, "System Version"],
+  [N.TagInstalledModule, "Installed Modules"]
 ]));
 
 //initial text sets

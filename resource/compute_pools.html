@@ -92,6 +92,10 @@
             outputMessage(result['message']);
             return;
           }
+          if (!result['data']){
+            outputMessage('no compute pool available');
+            return
+          }
           if (0 == result['data'].length){
             outputMessage('no compute pool available');
             return;
@@ -116,6 +120,8 @@
                   $('<i>').addClass('material-icons blue-gray-text darken-2').text('storage')
                 )
               ).append(
+                $('<td>').text(texts.get(N.TagFailover))
+              ).append(
                 $('<td>').text(texts.get(N.TagStatus))
               ).append($('<td>'))
             )
@@ -136,6 +142,17 @@
               $('<td>').text(storage)
             );
             var operators = $('<td>');
+            if (pool['failover']){
+              //failover enabled
+              content.append(
+                $('<td>').append(
+                  $('<i>').addClass('material-icons green-text darken-2 tooltipped').attr('data-position', 'top').
+                    attr('data-tooltip', texts.get(N.TagEnable)).text('autorenew')
+                )
+              );
+            }else{
+              content.append($('<td>'));
+            }
             //Status
             if (pool['enabled']){
               content.append(
