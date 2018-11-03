@@ -1,12 +1,16 @@
 # Change Log
 
-## [0.5.1] - 2018-10-17
+## [0.5.1] - 2018-11-3
 
 ### Added
 
 - Multi-language support
 
 - Enable/Disable cell
+
+- Enable failover option in compute pool
+
+- Migrate instance
 
 ### Changed
 

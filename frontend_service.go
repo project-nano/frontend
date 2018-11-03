@@ -182,6 +182,10 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/instances/:id/snapshots/:name", GET)
 	redirect(router, "/instances/:id/snapshots/:name", DELETE)
 
+	//migrations
+	redirect(router, "/migrations/", GET)
+	redirect(router, "/migrations/:id", GET)
+	redirect(router, "/migrations/", POST)
 }
 
 func (service *FrontEndService)defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
