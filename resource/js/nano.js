@@ -368,7 +368,7 @@ N.SetLanguage = function(lang){
 N.GetLanguage = function(){
   var current = localStorage.getItem('current_language');
   if (!current){
-    current = _defaultLang;
+    current = N.en_US;
     localStorage.setItem('current_language', current);
   }
   return current;
