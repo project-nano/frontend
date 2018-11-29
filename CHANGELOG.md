@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.6.1] - 2018-11-29
+
+### Added
+
+- Redirect address pool/range API
+
 ## [0.5.1] - 2018-11-3
 
 ### Added

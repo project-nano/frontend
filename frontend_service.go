@@ -27,7 +27,7 @@ type FrontEndService struct {
 }
 
 const (
-	CurrentVersion = "0.5.1"
+	CurrentVersion = "0.6.1"
 )
 
 func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
@@ -153,6 +153,19 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/compute_pool_cells/:pool/:cell", POST)
 	redirect(router, "/compute_pool_cells/:pool/:cell", PUT)
 	redirect(router, "/compute_pool_cells/:pool/:cell", DELETE)
+
+	//address pool
+	redirect(router, "/address_pools/", GET)
+	redirect(router, "/address_pools/:pool", GET)
+	redirect(router, "/address_pools/:pool", POST)
+	redirect(router, "/address_pools/:pool", PUT)
+	redirect(router, "/address_pools/:pool", DELETE)
+
+	//address range
+	redirect(router, "/address_pools/:pool/:type/ranges/", GET)
+	redirect(router, "/address_pools/:pool/:type/ranges/:start", GET)
+	redirect(router, "/address_pools/:pool/:type/ranges/:start", POST)
+	redirect(router, "/address_pools/:pool/:type/ranges/:start", DELETE)
 
 	//storage pools
 	redirect(router, "/storage_pools/", GET)
