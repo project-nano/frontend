@@ -1,10 +1,16 @@
 # Change Log
 
-## [0.6.1] - 2018-11-29
+## [0.6.1] - 2018-11-30
 
 ### Added
 
 - Redirect address pool/range API
+
+- Addess pool/range managment page
+
+### Changed
+
+- Address pool option when creating/modifing compute pool
 
 ## [0.5.1] - 2018-11-3
 
