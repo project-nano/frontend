@@ -73,7 +73,7 @@ create new compute pool
   + cells(array[string], optional) - list of initial cell names
   + network_mode (enum[string], optional) - plain/share/mono
   + storage (string, optional) - attached storage pool name
-  + addresses (string, optional) - attached address pool name
+  + network (string, optional) - attached address pool name
   + failover (bool, optional) - enable failover
 
 
@@ -84,7 +84,7 @@ create new compute pool
       "cells":["cell1", "cell2"],
       "network_mode": "share",
       "storage": "some_ceph_cluster",
-      "addresses": "nat_address_pool_1",
+      "network": "nat_address_pool_1",
       "failover": true
     }
   ]
@@ -102,7 +102,7 @@ modify compute pool config
   + enable(boolean, optional) - set pool enable/disable
   + network_mode (enum[string], optional) - plain/share/mono
   + storage (string, optional) - attached storage pool name
-  + addresses (string, optional) - attached address pool name
+  + network (string, optional) - attached address pool name
 
 + Request change compute pool (application/json)
 
@@ -522,7 +522,8 @@ Modify stoarge pool, only empty pool allowed(no volumes available)
         "monitor_secret": "abd",
         "internal":{
           "network_address": "172.18.6.7",
-          "display_address": "172.18.5.3:5901"
+          "display_address": "172.18.5.3:5901",
+          "allocated_address": "172.18.6.7"
         },
         "external":{
           "network_address": "202.3.1.34",
@@ -569,7 +570,8 @@ Modify stoarge pool, only empty pool allowed(no volumes available)
         "monitor_secret": "abd",
         "internal":{
           "network_address": "172.18.6.7",
-          "display_address": "172.18.5.3:5901"
+          "display_address": "172.18.5.3:5901",
+          "allocated_address": "172.18.6.7"
         },
         "external":{
           "network_address": "202.3.1.34",
@@ -593,6 +595,173 @@ Modify stoarge pool, only empty pool allowed(no volumes available)
       }]
     }
   ]
+
+## Address Pool [/address_pools/{name}]
+
++ Parameters
+  + name (string, optional) - pool name
+
+### Query all address pools [GET /address_pools/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "address1",
+          "gateway": "172.16.3.254",
+          "addresses": 120,
+          "allocated": 17
+        },
+        {
+          "name": "address2",
+          "gateway": "172.16.7.254",
+          "addresses": 230,
+          "allocated": 10
+        }
+      ]
+
+    }
+  ]
+
+### Get address pool status [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "gateway": "172.16.3.254",
+        "dns": [
+          "8.8.8.8",
+          "10.10.10.10"
+        ],
+        "ranges": [
+          {
+            "start": "172.16.3.1",
+            "end": "172.16.3.18",
+            "netmask": "255.255.255.0",
+          },
+          {
+            "start": "172.16.3.20",
+            "end": "172.16.3.190",
+            "netmask": "255.255.255.0",
+          }
+        ],
+        "allocated": [
+          {
+              "address": "172.16.3.6",
+              "instance": "abcdef-1234567890",
+          },
+          {
+              "address": "172.16.3.17",
+              "instance": "abcdef-1234567893",
+          }
+        ]
+      }
+    }
+  ]
+
+### Create new address pool [POST]
+
++ Request Add Address Range (application/json)
+
+  + Attributes
+    + gateway (string) - gateway bound with instance
+    + dns (array[string]) - list of dns server bound with instance
+
+  + Body
+
+    {
+      "gateway": "172.16.3.254",
+      "dns": [
+        "8.8.8.8",
+        "10.10.10.10"
+      ]
+    }
+
+### Modify address pool [PUT]
+
+### Delete address pool [DELETE]
+
+## Address Range [/address_pools/{name}/{type}/ranges/{start}]
+
++ Parameters
+  + name (string) - name of address pool
+  + type (enum[string]) - range type, 'external'/'internal'
+  + start (string, optional) - start address of range
+
+### Query Address Ranges [GET /address_pools/{name}/{type}/ranges/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "start": "172.16.3.1",
+          "end": "172.16.3.18",
+          "netmask": "255.255.255.0"
+        },
+        {
+          "start": "172.16.3.25",
+          "end": "172.16.3.200",
+          "netmask": "255.255.255.0"
+        }
+      ]
+    }
+  ]
+
+### Get Address Ranges Status [GET]
+
++ Response 200 (application/json)
+
+    [
+      {
+        "error_code": 0,
+        "message": "",
+        "data":{
+          "start": "172.16.3.1",
+          "end": "172.16.3.18",
+          "netmask": "255.255.255.0",
+          "allocated": [
+            {
+                "address": "172.16.3.6",
+                "instance": "abcdef-1234567890",
+            },
+            {
+                "address": "172.16.3.17",
+                "instance": "abcdef-1234567893",
+            }
+          ]
+        }
+      }
+    ]
+
+
+### Add Address Range [POST]
+
++ Request Add Address Range (application/json)
+
+  + Attributes
+    + end (string) - end address of ip range
+    + netmask (string) - netmask of ip range
+
+  + Body
+
+    {
+      "end": "172.16.3.18",
+      "netmask": "255.255.255.0"
+    }
+
+### Remove Address Range [DELETE]
 
 # Group Virtual machines
 
@@ -634,7 +803,8 @@ Modify stoarge pool, only empty pool allowed(no volumes available)
             "display_protocol": "vnc",
             "internal":{
               "network_address": "172.18.6.7",
-              "display_address": "172.18.5.3:5901"
+              "display_address": "172.18.5.3:5901",
+              "allocated_address": "172.18.6.7"
             },
             "external":{
               "network_address": "202.3.1.34",
@@ -662,7 +832,8 @@ Modify stoarge pool, only empty pool allowed(no volumes available)
             "display_protocol": "vnc",
             "internal":{
               "network_address": "172.18.6.7",
-              "display_address": "172.18.5.3:5901"
+              "display_address": "172.18.5.3:5901",
+              "allocated_address": "172.18.6.7"
             },
             "external":{
               "network_address": "202.3.1.34",
@@ -723,7 +894,8 @@ VM config/storage/network
         "monitor_secret": "abd",
         "internal":{
           "network_address": "172.18.6.7",
-          "display_address": "172.18.5.3:5901"
+          "display_address": "172.18.5.3:5901",
+          "allocated_address": "172.18.6.7"
         },
         "external":{
           "network_address": "202.3.1.34",
@@ -995,7 +1167,8 @@ VM running instance
         "display_protocol": "vnc",
         "internal":{
           "network_address": "172.18.6.7",
-          "display_address": "172.18.5.3:5901"
+          "display_address": "172.18.5.3:5901",
+          "allocated_address": "172.18.6.7"
         },
         "external":{
           "network_address": "202.3.1.34",
