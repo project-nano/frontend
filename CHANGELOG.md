@@ -1,12 +1,20 @@
 # Change Log
 
+## [0.7.1] - 2018-12-11
+
+### Added
+
+- Role/Group/User management
+
+- Session authenticate and manage
+
 ## [0.6.1] - 2018-11-30
 
 ### Added
 
 - Redirect address pool/range API
 
-- Addess pool/range managment page
+- Address pool/range management page
 
 ### Changed
 

@@ -15,19 +15,20 @@ import (
 )
 
 type FrontEndService struct {
-
 	serviceListener net.Listener
-	frontendServer http.Server
-	listenAddress  string
-	backendHost    string
-	backendURL     string
-	reverseProxy   *httputil.ReverseProxy
-	channelManager *ChannelManager
+	frontendServer  http.Server
+	listenAddress   string
+	backendHost     string
+	backendURL      string
+	reverseProxy    *httputil.ReverseProxy
+	channelManager  *ChannelManager
+	sessionManager  *SessionManager
+	userManager     *UserManager
 	framework.SimpleRunner
 }
 
 const (
-	CurrentVersion = "0.6.1"
+	CurrentVersion = "0.7.1"
 )
 
 func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
@@ -199,6 +200,47 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/migrations/", GET)
 	redirect(router, "/migrations/:id", GET)
 	redirect(router, "/migrations/", POST)
+	
+	//inner function
+	
+	//user roles
+	router.GET("/roles/", service.queryRoles)
+	router.POST("/roles/:name", service.addRole)
+	router.PUT("/roles/:name", service.modifyRole)
+	router.DELETE("/roles/:name", service.removeRole)
+
+	//user groups
+	router.GET("/user_groups/", service.queryGroups)
+	router.POST("/user_groups/:group", service.addGroup)
+	router.PUT("/user_groups/:group", service.modifyGroup)
+	router.DELETE("/user_groups/:group", service.removeGroup)
+
+	router.GET("/user_groups/:group/members/", service.queryGroupMembers)
+	router.POST("/user_groups/:group/members/:user", service.addGroupMember)
+	router.DELETE("/user_groups:group/members/:user", service.removeGroupMember)
+
+	router.GET("/user_groups/:group/roles/", service.queryGroupRoles)
+	router.POST("/user_groups/:group/roles/:role", service.addGroupRole)
+	router.DELETE("/user_groups:group/roles/:role", service.removeGroupRole)
+
+	//users
+	router.GET("/users/", service.queryUsers)
+	router.GET("/users/:user", service.getUser)
+	router.POST("/users/:user", service.createUser)
+	router.PUT("/users/:user", service.modifyUser)
+	router.DELETE("/users/:user", service.deleteUser)
+
+	router.PUT("/users/:user/password/", service.modifyUserPassword)
+	
+	//sessions
+	router.GET("/sessions/", service.querySessions)
+	router.GET("/sessions/:session", service.getSession)
+	router.POST("/sessions/:session", service.createSession)
+	router.PUT("/sessions/:session", service.updateSession)
+	
+	//logs
+	router.GET("/logs/", service.queryLogs)
+	router.POST("/logs/", service.addLog)
 }
 
 func (service *FrontEndService)defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
@@ -234,4 +276,118 @@ func ResponseOK(data interface{}, writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(Response{0, "", data})
+}
+
+//user roles
+
+func (service *FrontEndService) queryRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	
+}
+
+func (service *FrontEndService) addRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) modifyRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) removeRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+
+//user groups
+
+func (service *FrontEndService) queryGroups(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) modifyGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) removeGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) queryGroupMembers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) addGroupMember(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) removeGroupMember(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) queryGroupRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) addGroupRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) removeGroupRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+//users
+
+func (service *FrontEndService) queryUsers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) getUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) createUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) modifyUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) deleteUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) modifyUserPassword(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+//sessions
+
+func (service *FrontEndService) querySessions(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+//logs
+func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
+}
+
+func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+
 }
