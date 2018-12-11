@@ -19,7 +19,7 @@ func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *htt
 	var decoder = json.NewDecoder(r.Body)
 	if err := decoder.Decode(&request);err != nil{
 		log.Printf("<%s> [create channel] parse request fail: %s", r.RemoteAddr, err.Error())
-		ResponseFail(ResponseDefaultError, err.Error(), w)
+		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	{
@@ -39,7 +39,7 @@ func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *htt
 		resp, err := http.Get(fmt.Sprintf("%s/guests/%s", service.backendURL, request.Guest))
 		if err != nil{
 			log.Printf("<%s> [create channel] get guest config fail: %s", r.RemoteAddr, err.Error())
-			ResponseFail(ResponseDefaultError, err.Error(), w)
+			ResponseFail(DefaultServerError, err.Error(), w)
 			return
 		}
 		defer resp.Body.Close()
@@ -47,12 +47,12 @@ func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *htt
 		decoder = json.NewDecoder(resp.Body)
 		if err = decoder.Decode(&result);err != nil{
 			log.Printf("<%s> [create channel] parse guest config fail: %s", r.RemoteAddr, err.Error())
-			ResponseFail(ResponseDefaultError, err.Error(), w)
+			ResponseFail(DefaultServerError, err.Error(), w)
 			return
 		}
 		if 0 != result.ErrorCode{
 			log.Printf("<%s> [create channel] get guest config fail: %s", r.RemoteAddr, result.Message)
-			ResponseFail(ResponseDefaultError, result.Message, w)
+			ResponseFail(DefaultServerError, result.Message, w)
 			return
 		}
 		var respChan = make(chan ChannelResult)
@@ -60,7 +60,7 @@ func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *htt
 		var tokenResult = <- respChan
 		if tokenResult.Error != nil{
 			log.Printf("<%s> [create channel] create channel fail: %s", r.RemoteAddr, tokenResult.Error.Error())
-			ResponseFail(ResponseDefaultError, tokenResult.Error.Error(), w)
+			ResponseFail(DefaultServerError, tokenResult.Error.Error(), w)
 			return
 		}
 		log.Printf("<%s> [create channel] channel '%s' created", r.RemoteAddr, tokenResult.ID)
@@ -73,7 +73,7 @@ func (service *FrontEndService)handleEstablishChannel(w http.ResponseWriter, r *
 	if "" == channelID{
 		err := errors.New("must specify channel id")
 		log.Printf("<%s> [establish channel] parse request fail: %s", r.RemoteAddr, err.Error())
-		ResponseFail(ResponseDefaultError, err.Error(), w)
+		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	log.Printf("<%s> [establish channel] channel '%s'", r.RemoteAddr, channelID)
@@ -82,7 +82,7 @@ func (service *FrontEndService)handleEstablishChannel(w http.ResponseWriter, r *
 	var result = <- respChan
 	if result.Error != nil{
 		log.Printf("<%s> [establish channel] get channel fail: %s", r.RemoteAddr, result.Error.Error())
-		ResponseFail(ResponseDefaultError, result.Error.Error(), w)
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
 		return
 	}
 	var targetAddress = result.Address
@@ -99,14 +99,14 @@ func (service *FrontEndService)handleEstablishChannel(w http.ResponseWriter, r *
 	wsConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil{
 		log.Printf("<%s> [establish channel] upgrade fail: %s", r.RemoteAddr, err.Error())
-		ResponseFail(ResponseDefaultError, err.Error(), w)
+		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	defer wsConn.Close()
 	vncConn, err := net.Dial(VncProtocol, targetAddress)
 	if err != nil{
 		log.Printf("<%s> [establish channel] open vnc channel fail: %s", r.RemoteAddr, err.Error())
-		ResponseFail(ResponseDefaultError, err.Error(), w)
+		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	defer vncConn.Close()

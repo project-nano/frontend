@@ -205,12 +205,14 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	
 	//user roles
 	router.GET("/roles/", service.queryRoles)
-	router.POST("/roles/:name", service.addRole)
-	router.PUT("/roles/:name", service.modifyRole)
-	router.DELETE("/roles/:name", service.removeRole)
+	router.GET("/roles/:role", service.getRole)
+	router.POST("/roles/:role", service.addRole)
+	router.PUT("/roles/:role", service.modifyRole)
+	router.DELETE("/roles/:role", service.removeRole)
 
 	//user groups
 	router.GET("/user_groups/", service.queryGroups)
+	router.GET("/user_groups/:group", service.getGroup)
 	router.POST("/user_groups/:group", service.addGroup)
 	router.PUT("/user_groups/:group", service.modifyGroup)
 	router.DELETE("/user_groups/:group", service.removeGroup)
@@ -231,16 +233,16 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.DELETE("/users/:user", service.deleteUser)
 
 	router.PUT("/users/:user/password/", service.modifyUserPassword)
-	
-	//sessions
-	router.GET("/sessions/", service.querySessions)
-	router.GET("/sessions/:session", service.getSession)
-	router.POST("/sessions/:session", service.createSession)
-	router.PUT("/sessions/:session", service.updateSession)
-	
-	//logs
-	router.GET("/logs/", service.queryLogs)
-	router.POST("/logs/", service.addLog)
+	//
+	////sessions
+	//router.GET("/sessions/", service.querySessions)
+	//router.GET("/sessions/:session", service.getSession)
+	//router.POST("/sessions/:session", service.createSession)
+	//router.PUT("/sessions/:session", service.updateSession)
+	//
+	////logs
+	//router.GET("/logs/", service.queryLogs)
+	//router.POST("/logs/", service.addLog)
 }
 
 func (service *FrontEndService)defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
@@ -263,7 +265,7 @@ type Response struct {
 }
 
 const (
-	ResponseDefaultError = 500
+	DefaultServerError = 500
 )
 
 func ResponseFail(code int, message string, writer io.Writer) error {
@@ -281,88 +283,396 @@ func ResponseOK(data interface{}, writer io.Writer) error {
 //user roles
 
 func (service *FrontEndService) queryRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	
+	var data = make([]string, 0)
+	var respChan = make(chan UserResult, 1)
+	service.userManager.QueryRoles(respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		var err = result.Error
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK(data, w)
+}
+
+func (service *FrontEndService) getRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	var roleName = params.ByName("role")
+	var respChan = make(chan UserResult, 1)
+	service.userManager.GetRole(roleName, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
+		return
+	}
+	type ResponsePayload struct {
+		Menu []string `json:"menu,omitempty"`
+	}
+	var payload = ResponsePayload{Menu:result.Role.Menu}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) addRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var roleName = params.ByName("role")
+	type RequestData struct {
+		Menu []string `json:"menu,omitempty"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	var role = UserRole{Name:roleName, Menu:requestData.Menu}
+	service.userManager.AddRole(role, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) modifyRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var roleName = params.ByName("role")
+	type RequestData struct {
+		Menu []string `json:"menu,omitempty"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	var role = UserRole{Name:roleName, Menu:requestData.Menu}
+	service.userManager.ModifyRole(role, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) removeRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var roleName = params.ByName("role")
+	var respChan = make(chan error, 1)
+	service.userManager.RemoveRole(roleName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 
 //user groups
 
 func (service *FrontEndService) queryGroups(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	type RespGroup struct {
+		Name    string `json:"name"`
+		Display string `json:"display"`
+		Member  int    `json:"member"`
+	}
+	var payload = make([]RespGroup, 0)
+	var respChan = make(chan UserResult, 1)
+	service.userManager.QueryGroups(respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		var err = result.Error
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	for _, group := range result.GroupList{
+		var memberCount = len(group.Members)
+		payload = append(payload, RespGroup{group.Name, group.Display, memberCount})
+	}
+	ResponseOK(payload, w)
+}
 
+func (service *FrontEndService) getGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	var groupName = params.ByName("group")
+	var respChan = make(chan UserResult, 1)
+	service.userManager.GetGroup(groupName, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
+		return
+	}
+	type RespGroup struct {
+		Name    string   `json:"name"`
+		Display string   `json:"display"`
+		Member  []string `json:"member,omitempty"`
+	}
+	var group = result.Group
+	var payload = RespGroup{Name: group.Name, Display: group.Display}
+	for memberName, _ := range group.Members{
+		payload.Member = append(payload.Member, memberName)
+	}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	type RequestData struct {
+		Display string `json:"display"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.userManager.AddGroup(groupName, requestData.Display, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) modifyGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	type RequestData struct {
+		Display string `json:"display"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.userManager.ModifyGroup(groupName, requestData.Display, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) removeGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var respChan = make(chan error, 1)
+	service.userManager.RemoveGroup(groupName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) queryGroupMembers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var respChan = make(chan UserResult, 1)
+	service.userManager.GetGroup(groupName, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
+		return
+	}
+	var payload = make([]string, 0)
+	for memberName, _ := range result.Group.Members{
+		payload = append(payload, memberName)
+	}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) addGroupMember(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var userName = params.ByName("user")
+	var respChan = make(chan error, 1)
+	service.userManager.AddGroupMember(groupName, userName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) removeGroupMember(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var userName = params.ByName("user")
+	var respChan = make(chan error, 1)
+	service.userManager.RemoveGroupMember(groupName, userName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) queryGroupRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var respChan = make(chan UserResult, 1)
+	service.userManager.GetGroup(groupName, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
+		return
+	}
+	var payload = make([]string, 0)
+	for roleName, _ := range result.Group.Roles{
+		payload = append(payload, roleName)
+	}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) addGroupRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var roleName = params.ByName("role")
+	var respChan = make(chan error, 1)
+	service.userManager.AddGroupRole(groupName, roleName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) removeGroupRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var groupName = params.ByName("group")
+	var roleName = params.ByName("role")
+	var respChan = make(chan error, 1)
+	service.userManager.RemoveGroupRole(groupName, roleName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 //users
 
 func (service *FrontEndService) queryUsers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var payload = make([]string, 0)
+	var respChan = make(chan UserResult, 1)
+	service.userManager.QueryUsers(respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		var err = result.Error
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	for _, user := range result.UserList{
+		payload = append(payload, user.Name)
+	}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) getUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var userName = params.ByName("user")
+	var respChan = make(chan UserResult, 1)
+	service.userManager.GetUser(userName, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
+		return
+	}
+	type RespUser struct {
+		Name           string `json:"name"`
+		Nick           string `json:"nick,omitempty"`
+		Mail           string `json:"mail,omitempty"`
+	}
+	var user = result.User
+	var payload = RespUser{Name: user.Name, Nick: user.Nick, Mail:user.Mail}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) createUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var userName = params.ByName("user")
+	type RequestData struct {
+		Nick     string `json:"nick,omitempty"`
+		Mail     string `json:"mail,omitempty"`
+		Password string `json:"password"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.userManager.CreateUser(userName, requestData.Nick, requestData.Mail, requestData.Password, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) modifyUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var userName = params.ByName("user")
+	type RequestData struct {
+		Nick           string `json:"nick,omitempty"`
+		Mail           string `json:"mail,omitempty"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.userManager.ModifyUser(userName, requestData.Nick, requestData.Mail, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) deleteUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var userName = params.ByName("user")
+	var respChan = make(chan error, 1)
+	service.userManager.DeleteUser(userName, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 func (service *FrontEndService) modifyUserPassword(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var userName = params.ByName("user")
+	type RequestData struct {
+		Old string `json:"old"`
+		New string `json:"new"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.userManager.ModifyUserPassword(userName, requestData.Old, requestData.New, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 //sessions
