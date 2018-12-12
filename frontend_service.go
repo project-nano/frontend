@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"io"
 	"encoding/json"
+	"path/filepath"
+	"io/ioutil"
 )
 
 type FrontEndService struct {
@@ -31,15 +33,26 @@ const (
 	CurrentVersion = "0.7.1"
 )
 
-func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backendPort int) (service *FrontEndService, err error ) {
+func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
+	var configFile = filepath.Join(configPath, ConfigFileName)
+	data, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return
+	}
+	var config FrontEndConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return
+	}
+
 	service = &FrontEndService{}
-	service.listenAddress = fmt.Sprintf("%s:%d", listenHost, listenPort)
+	service.listenAddress = fmt.Sprintf("%s:%d", config.ListenAddress, config.ListenPort)
 	service.serviceListener, err = net.Listen("tcp", service.listenAddress)
 	if err != nil{
 		return
 	}
-	service.backendHost = backendHost
-	service.backendURL = fmt.Sprintf("http://%s:%d", backendHost, backendPort)
+	service.backendHost = config.ServiceHost
+	service.backendURL = fmt.Sprintf("http://%s:%d", config.ServiceHost, config.ServicePort)
 	proxyUrl, err := url.Parse(service.backendURL)
 	if err != nil{
 		return
@@ -54,6 +67,15 @@ func CreateFrontEnd(listenHost string, listenPort int, backendHost string, backe
 
 	service.frontendServer.Handler = router
 	service.Initial(service)
+
+	service.userManager, err = CreateUserManager(configPath)
+	if err != nil{
+		return
+	}
+	service.sessionManager, err = CreateSessionManager()
+	if err != nil{
+		return
+	}
 	return
 }
 
@@ -233,13 +255,13 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.DELETE("/users/:user", service.deleteUser)
 
 	router.PUT("/users/:user/password/", service.modifyUserPassword)
-	//
-	////sessions
-	//router.GET("/sessions/", service.querySessions)
-	//router.GET("/sessions/:session", service.getSession)
-	//router.POST("/sessions/:session", service.createSession)
-	//router.PUT("/sessions/:session", service.updateSession)
-	//
+
+	//sessions
+	router.GET("/sessions/", service.querySessions)
+	router.GET("/sessions/:session", service.getSession)
+	router.POST("/sessions/:session", service.createSession)
+	router.PUT("/sessions/:session", service.updateSession)
+
 	////logs
 	//router.GET("/logs/", service.queryLogs)
 	//router.POST("/logs/", service.addLog)
@@ -678,19 +700,101 @@ func (service *FrontEndService) modifyUserPassword(w http.ResponseWriter, r *htt
 //sessions
 
 func (service *FrontEndService) querySessions(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var payload = make([]string, 0)
+	var respChan = make(chan SessionResult, 1)
+	service.sessionManager.QuerySessions(respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		var err = result.Error
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	for _, session := range result.SessionList{
+		payload = append(payload, session.ID)
+	}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var sessionID = params.ByName("session")
+	var respChan = make(chan SessionResult, 1)
+	service.sessionManager.GetSession(sessionID, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		ResponseFail(DefaultServerError, result.Error.Error(), w)
+		return
+	}
+	type RespSession struct {
+		User string   `json:"user"`
+		Menu []string `json:"menu,omitempty"`
+	}
+	var session = result.Session
+	var payload = RespSession{session.User, session.Menu}
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 
+	type RequestData struct {
+		User     string `json:"user"`
+		Password string `json:"password"`
+		Nonce    string `json:"nonce"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	{
+		//verify
+		var respChan = make(chan error, 1)
+		service.userManager.VerifyUserPassword(requestData.User, requestData.Password, respChan)
+		err = <- respChan
+		if err != nil{
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+	}
+	var user LoginUser
+	{
+		var respChan = make(chan UserResult, 1)
+		service.userManager.GetUser(requestData.User, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			ResponseFail(DefaultServerError, result.Error.Error(), w)
+			return
+		}
+		user = result.User
+	}
+	{
+		//allocate
+		var respChan = make(chan SessionResult, 1)
+		service.sessionManager.AllocateSession(user.Name, requestData.Nonce, user.Menu, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			ResponseFail(DefaultServerError, result.Error.Error(), w)
+			return
+		}
+		type RespSession struct {
+			Session string `json:"session"`
+		}
+		var payload = RespSession{result.Session.ID}
+		ResponseOK(payload, w)
+	}
 }
 
 func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	var sessionID = params.ByName("session")
+	var respChan = make(chan error, 1)
+	service.sessionManager.UpdateSession(sessionID, respChan)
+	var err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }
 
 //logs

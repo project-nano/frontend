@@ -1,8 +1,9 @@
 package main
 
-type UserManager struct {
-
-}
+import (
+	"path/filepath"
+	"nano/framework"
+)
 
 type UserRole struct {
 	Name string   `json:"name"`
@@ -17,11 +18,12 @@ type UserGroup struct {
 }
 
 type LoginUser struct {
-	Name           string `json:"name"`
-	Nick           string `json:"nick,omitempty"`
-	Mail           string `json:"mail,omitempty"`
-	Group          string `json:"group,omitempty"`
-	SaltedPassword string `json:"salted_password"`
+	Name           string   `json:"name"`
+	Nick           string   `json:"nick,omitempty"`
+	Mail           string   `json:"mail,omitempty"`
+	Group          string   `json:"group,omitempty"`
+	SaltedPassword string   `json:"salted_password"`
+	Menu           []string `json:"-"`
 }
 
 type UserResult struct {
@@ -34,8 +36,78 @@ type UserResult struct {
 	UserList  []LoginUser
 }
 
+type userCommandType int
 
-func CreateUserManager()  (manager *UserManager, err error){
+const (
+	cmdQueryRole = iota
+	cmdGetRole
+	cmdAddRole
+	cmdModifyRole
+	cmdRemoveRole
+	cmdQueryGroup
+	cmdGetGroup
+	cmdAddGroup
+	cmdModifyGroup
+	cmdRemoveGroup
+	cmdQueryGroupMember
+	cmdAddGroupMember
+	cmdRemoveGroupMember
+	cmdQueryGroupRole
+	cmdAddGroupRole
+	cmdRemoveGroupRole
+	cmdQueryUser
+	cmdGetUser
+	cmdCreateUser
+	cmdModifyUser
+	cmdDeleteUser
+	cmdModifyUserPassword
+	cmdVerifyUserPassword
+)
+
+type userCMD struct {
+	Type       userCommandType
+	Role       string
+	Group      string
+	User       string
+	Menu       []string
+	ResultChan chan UserResult
+	ErrorChan  chan error
+}
+
+type UserManager struct {
+	users      map[string]LoginUser
+	groups     map[string]UserGroup
+	roles      map[string]UserRole
+	configFile string
+	commands   chan userCMD
+	framework.SimpleRunner
+}
+
+func CreateUserManager(configPath string)  (manager *UserManager, err error){
+	const (
+		ConfigName = "users.data"
+	)
+	manager = &UserManager{}
+	manager.configFile = filepath.Join(configPath, ConfigName)
+	manager.users = map[string]LoginUser{}
+	manager.groups = map[string]UserGroup{}
+	manager.roles = map[string]UserRole{}
+	manager.Initial(manager)
+	if err = manager.loadConfig(); err != nil{
+		return
+	}
+	return manager, nil
+}
+
+func (manager *UserManager) Routine(){
+
+}
+
+func (manager *UserManager) loadConfig() (err error){
+	panic("not implement")
+}
+
+func (manager *UserManager) saveConfig() (err error){
 	panic("not implement")
 }
 
@@ -125,5 +197,9 @@ func (manager *UserManager) DeleteUser(name string, resp chan error)  {
 }
 
 func (manager *UserManager) ModifyUserPassword(name, old, new string, resp chan error)  {
+
+}
+
+func (manager *UserManager) VerifyUserPassword(name, password string, resp chan error)  {
 
 }

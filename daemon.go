@@ -101,18 +101,8 @@ func generateConfigure(workingPath string) (err error){
 
 func createDaemon(workingPath string) (service framework.DaemonizedService, err error){
 	var configPath = filepath.Join(workingPath, ConfigPathName)
-	var configFile = filepath.Join(configPath, ConfigFileName)
-	data, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		return
-	}
-	var config FrontEndConfig
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		return
-	}
 	var s = MainService{}
-	s.frontend, err = CreateFrontEnd(config.ListenAddress, config.ListenPort, config.ServiceHost, config.ServicePort)
+	s.frontend, err = CreateFrontEnd(configPath)
 	return &s, err
 }
 
