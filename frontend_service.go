@@ -346,8 +346,7 @@ func (service *FrontEndService) addRole(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	var respChan = make(chan error, 1)
-	var role = UserRole{Name:roleName, Menu:requestData.Menu}
-	service.userManager.AddRole(role, respChan)
+	service.userManager.AddRole(roleName, requestData.Menu, respChan)
 	err = <- respChan
 	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
@@ -369,8 +368,7 @@ func (service *FrontEndService) modifyRole(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var respChan = make(chan error, 1)
-	var role = UserRole{Name:roleName, Menu:requestData.Menu}
-	service.userManager.ModifyRole(role, respChan)
+	service.userManager.ModifyRole(roleName, requestData.Menu, respChan)
 	err = <- respChan
 	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
@@ -497,15 +495,15 @@ func (service *FrontEndService) removeGroup(w http.ResponseWriter, r *http.Reque
 func (service *FrontEndService) queryGroupMembers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	var groupName = params.ByName("group")
 	var respChan = make(chan UserResult, 1)
-	service.userManager.GetGroup(groupName, respChan)
+	service.userManager.QueryGroupMembers(groupName, respChan)
 	var result = <- respChan
 	if result.Error != nil{
 		ResponseFail(DefaultServerError, result.Error.Error(), w)
 		return
 	}
 	var payload = make([]string, 0)
-	for memberName, _ := range result.Group.Members{
-		payload = append(payload, memberName)
+	for _, member := range result.UserList{
+		payload = append(payload, member.Name)
 	}
 	ResponseOK(payload, w)
 }
@@ -539,15 +537,15 @@ func (service *FrontEndService) removeGroupMember(w http.ResponseWriter, r *http
 func (service *FrontEndService) queryGroupRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	var groupName = params.ByName("group")
 	var respChan = make(chan UserResult, 1)
-	service.userManager.GetGroup(groupName, respChan)
+	service.userManager.QueryGroupRoles(groupName, respChan)
 	var result = <- respChan
 	if result.Error != nil{
 		ResponseFail(DefaultServerError, result.Error.Error(), w)
 		return
 	}
 	var payload = make([]string, 0)
-	for roleName, _ := range result.Group.Roles{
-		payload = append(payload, roleName)
+	for _, role := range result.RoleList{
+		payload = append(payload, role.Name)
 	}
 	ResponseOK(payload, w)
 }
