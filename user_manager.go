@@ -6,6 +6,10 @@ import (
 	"log"
 	"sort"
 	"fmt"
+	"github.com/pkg/errors"
+	"regexp"
+	"crypto/rand"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserRole struct {
@@ -21,12 +25,12 @@ type UserGroup struct {
 }
 
 type LoginUser struct {
-	Name           string   `json:"name"`
-	Nick           string   `json:"nick,omitempty"`
-	Mail           string   `json:"mail,omitempty"`
-	Group          string   `json:"group,omitempty"`
-	SaltedPassword string   `json:"salted_password"`
-	Menu           []string `json:"-"`
+	Name   string          `json:"name"`
+	Nick   string          `json:"nick,omitempty"`
+	Mail   string          `json:"mail,omitempty"`
+	Group  string          `json:"-`
+	Secret EncryptedSecret `json:"secret"`
+	Menu   []string        `json:"-"`
 }
 
 type UserResult struct {
@@ -37,6 +41,18 @@ type UserResult struct {
 	GroupList []UserGroup
 	User      LoginUser
 	UserList  []LoginUser
+}
+
+type cryptMethod int
+
+const (
+	methodBCrypt = iota
+)
+
+type EncryptedSecret struct {
+	Method cryptMethod `json:"method"`
+	Salt   string      `json:"salt"`
+	Hash   string      `json:"hash"`
 }
 
 type userCommandType int
@@ -83,13 +99,16 @@ type userCMD struct {
 }
 
 type UserManager struct {
-	users      map[string]LoginUser
-	groups     map[string]UserGroup
-	roles      map[string]UserRole
-	configFile string
-	commands   chan userCMD
+	users         map[string]LoginUser
+	groups        map[string]UserGroup
+	roles         map[string]UserRole
+	passwordRegex *regexp.Regexp
+	configFile    string
+	commands      chan userCMD
 	framework.SimpleRunner
 }
+
+var ObscuredSecretError = errors.New("invalid user or password")
 
 func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	const (
@@ -100,6 +119,14 @@ func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	manager.users = map[string]LoginUser{}
 	manager.groups = map[string]UserGroup{}
 	manager.roles = map[string]UserRole{}
+	const (
+		exp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\\$%\\^&\\*])(?=.{8,})"
+	)
+	manager.passwordRegex, err = regexp.Compile(exp)
+	if err != nil{
+		return
+	}
+
 	manager.Initial(manager)
 	if err = manager.loadConfig(); err != nil{
 		return
@@ -602,21 +629,140 @@ func (manager *UserManager) handleGetUser(name string, resp chan UserResult)  (e
 }
 
 func (manager *UserManager) handleCreateUser(name, nick, mail, password string, resp chan error)  (err error){
-	panic("not implement")
+	if _, exists := manager.users[name]; exists{
+		err = fmt.Errorf("user '%s' already exists", name)
+		resp <- err
+		return err
+	}
+	if err = isSecurePassword(password, manager.passwordRegex); err != nil{
+		resp <- err
+		return err
+	}
+	secret, err := hashPassword(methodBCrypt, password)
+	if err != nil{
+		resp <- err
+		return err
+	}
+	var user = LoginUser{Name:name, Nick:nick, Mail:mail, Secret:secret}
+	manager.users[name] = user
+	log.Printf("<user> new user '%s' created", name)
+	resp <- nil
+	return manager.saveConfig()
 }
 
 func (manager *UserManager) handleModifyUser(name, nick, mail string, resp chan error)  (err error){
-	panic("not implement")
+	user, exists := manager.users[name]
+	if !exists{
+		err = fmt.Errorf("invalid user '%s'", name)
+		resp <- err
+		return err
+	}
+	if "" != mail{
+		user.Mail = mail
+	}
+	if "" != nick{
+		user.Nick = nick
+	}
+	manager.users[name] = user
+	log.Printf("<user> user '%s' modified", name)
+	resp <- nil
+	return manager.saveConfig()
 }
 
 func (manager *UserManager) handleDeleteUser(name string, resp chan error)  (err error){
-	panic("not implement")
+	if _, exists := manager.users[name]; !exists{
+		err = fmt.Errorf("invalid user '%s'", name)
+		resp <- err
+		return err
+	}
+	delete(manager.users, name)
+	log.Printf("<user> user '%s' deleted", name)
+	resp <- nil
+	return manager.saveConfig()
 }
 
 func (manager *UserManager) handleModifyUserPassword(name, old, new string, resp chan error)  (err error){
-	panic("not implement")
+	user, exists := manager.users[name]
+	if !exists{
+		err = fmt.Errorf("invalid user '%s'", name)
+		resp <- ObscuredSecretError
+		return err
+	}
+	if err = verifyPassword(old, user.Secret); err != nil{
+		resp <- ObscuredSecretError
+		return err
+	}
+	if err = isSecurePassword(new, manager.passwordRegex); err != nil{
+		resp <- err
+		return err
+	}
+	user.Secret, err = hashPassword(methodBCrypt, new)
+	if err != nil{
+		resp <- err
+		return err
+	}
+	manager.users[name] = user
+	log.Printf("<user> password of user '%s' modified", name)
+	resp <- nil
+	return manager.saveConfig()
 }
 
 func (manager *UserManager) handleVerifyUserPassword(name, password string, resp chan error)  (err error){
-	panic("not implement")
+	user, exists := manager.users[name]
+	if !exists{
+		err = fmt.Errorf("invalid user '%s'", name)
+		resp <- ObscuredSecretError
+		return err
+	}
+	if err = verifyPassword(password, user.Secret); err != nil{
+		resp <- ObscuredSecretError
+		return err
+	}
+	resp <- nil
+	return nil
+}
+
+func isSecurePassword(password string, checker *regexp.Regexp) (err error){
+	const (
+		LeastLength = 8
+	)
+	if len(password) < LeastLength{
+		err = fmt.Errorf("length of password must > %d", LeastLength)
+		return
+	}
+	if !checker.MatchString(password){
+		err = errors.New("password must contain one lowercase, one uppercase letter, and one digit")
+		return
+	}
+	return nil
+}
+
+func hashPassword(method cryptMethod, password string) (secret EncryptedSecret, err error){
+	const (
+		SaltLength = 32
+	)
+	var salt = make([]byte, SaltLength)
+	_, err = rand.Read(salt)
+	if err != nil{
+		return
+	}
+	secret.Method = method
+	secret.Salt = string(salt)
+	var input = append([]byte(password), salt...)
+	hashed, err := bcrypt.GenerateFromPassword(input, bcrypt.DefaultCost)
+	if err != nil{
+		return
+	}
+	secret.Hash = string(hashed)
+	return
+}
+
+func verifyPassword(password string, secret EncryptedSecret) (err error){
+	if methodBCrypt != secret.Method{
+		err = fmt.Errorf("invalid crypt method %d", secret.Method)
+		return
+	}
+	var input = append([]byte(password), []byte(secret.Salt)...)
+	var hash = []byte(secret.Hash)
+	return bcrypt.CompareHashAndPassword(hash, input)
 }
