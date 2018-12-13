@@ -10,6 +10,9 @@ import (
 	"regexp"
 	"crypto/rand"
 	"golang.org/x/crypto/bcrypt"
+	"os"
+	"encoding/json"
+	"io/ioutil"
 )
 
 type UserRole struct {
@@ -18,17 +21,17 @@ type UserRole struct {
 }
 
 type UserGroup struct {
-	Name    string
-	Display string
-	Roles   map[string]bool
-	Members map[string]bool
+	Name    string          `json:"name"`
+	Display string          `json:"display,omitempty"`
+	Roles   map[string]bool `json:"-"`
+	Members map[string]bool `json:"-"`
 }
 
 type LoginUser struct {
 	Name   string          `json:"name"`
 	Nick   string          `json:"nick,omitempty"`
 	Mail   string          `json:"mail,omitempty"`
-	Group  string          `json:"-`
+	Group  string          `json:"group,omitempty`
 	Secret EncryptedSecret `json:"secret"`
 	Menu   []string        `json:"-"`
 }
@@ -116,6 +119,7 @@ func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	)
 	manager = &UserManager{}
 	manager.configFile = filepath.Join(configPath, ConfigName)
+	manager.commands = make(chan userCMD, 1 << 10)
 	manager.users = map[string]LoginUser{}
 	manager.groups = map[string]UserGroup{}
 	manager.roles = map[string]UserRole{}
@@ -148,12 +152,84 @@ func (manager *UserManager) Routine(){
 	log.Println("<user> stopped")
 }
 
+type GroupConfig struct {
+	Name    string   `json:"name"`
+	Display string   `json:"display,omitempty"`
+	Role    []string `json:"role,omitempty"`
+	Members []string `json:"members,omitempty"`
+}
+
+type UserConfig struct {
+	Roles  []UserRole    `json:"roles,omitempty"`
+	Groups []GroupConfig `json:"groups,omitempty"`
+	Users  []LoginUser   `json:"users,omitempty"`
+}
+
 func (manager *UserManager) loadConfig() (err error){
-	panic("not implement")
+	if _, err = os.Stat(manager.configFile);os.IsNotExist(err){
+		log.Printf("<user> user data '%s' not available", manager.configFile)
+		return nil
+	}
+	file, err := os.Open(manager.configFile)
+	if err != nil{
+		return
+	}
+	var decoder = json.NewDecoder(file)
+	var config UserConfig
+	if err = decoder.Decode(&config); err != nil{
+		return
+	}
+	for _, role := range config.Roles{
+		manager.roles[role.Name] = role
+	}
+	for _, user := range config.Users{
+		manager.users[user.Name] = user
+	}
+	for _, groupConfig := range config.Groups{
+		var group = UserGroup{Name:groupConfig.Name, Display:groupConfig.Display}
+		for _, roleName := range groupConfig.Role{
+			group.Roles[roleName] = true
+		}
+		for _, memberName := range groupConfig.Members{
+			group.Members[memberName] = true
+		}
+		manager.groups[group.Name] = group
+	}
+	log.Printf("<user> %d role(s), %d group(s), %d user(s) loaded from '%s'",
+		len(manager.roles), len(manager.groups), len(manager.users), manager.configFile)
+	return nil
 }
 
 func (manager *UserManager) saveConfig() (err error){
-	panic("not implement")
+	const (
+		DefaultFilePerm = 0640
+	)
+	var config UserConfig
+	for _, user := range manager.users{
+		config.Users = append(config.Users, user)
+	}
+	for _, role := range manager.roles{
+		config.Roles = append(config.Roles, role)
+	}
+	for _, group := range manager.groups{
+		var groupConfig = GroupConfig{Name:group.Name, Display:group.Display}
+		for roleName, _ := range group.Roles{
+			groupConfig.Role = append(groupConfig.Role, roleName)
+		}
+		for memberName, _ := range group.Members{
+			groupConfig.Members = append(groupConfig.Members, memberName)
+		}
+	}
+	data, err := json.MarshalIndent(config, "", " ")
+	if err != nil{
+		return
+	}
+	if err = ioutil.WriteFile(manager.configFile, data, DefaultFilePerm); err != nil{
+		return
+	}
+	log.Printf("<user> %d role(s), %d group(s), %d user(s) saved to '%s'",
+		len(config.Roles), len(config.Groups), len(config.Users), manager.configFile)
+	return nil
 }
 
 func (manager *UserManager) QueryRoles(resp chan UserResult)  {
@@ -366,14 +442,21 @@ func (manager *UserManager) handleModifyRole(name string, menu []string, resp ch
 	return manager.saveConfig()
 }
 
-func (manager *UserManager) handleRemoveRole(name string, resp chan error) (err error){
-	if _, exists := manager.roles[name]; !exists{
-		err = fmt.Errorf("role '%s' not exists", name)
+func (manager *UserManager) handleRemoveRole(roleName string, resp chan error) (err error){
+	if _, exists := manager.roles[roleName]; !exists{
+		err = fmt.Errorf("role '%s' not exists", roleName)
 		resp <- err
 		return err
 	}
-	delete(manager.roles, name)
-	log.Printf("<user> role '%s' removed", name)
+	for groupName, group := range manager.groups{
+		if _, exists := group.Roles[roleName];exists{
+			err = fmt.Errorf("role '%s' attached with group '%s'", roleName, groupName)
+			resp <- err
+			return err
+		}
+	}
+	delete(manager.roles, roleName)
+	log.Printf("<user> role '%s' removed", roleName)
 	resp <- nil
 	return manager.saveConfig()
 }
@@ -437,14 +520,20 @@ func (manager *UserManager) handleModifyGroup(name, display string, resp chan er
 	return manager.saveConfig()
 }
 
-func (manager *UserManager) handleRemoveGroup(name string, resp chan error) (err error){
-	if _, exists := manager.groups[name]; !exists{
-		err = fmt.Errorf("group '%s' not exists", name)
+func (manager *UserManager) handleRemoveGroup(groupName string, resp chan error) (err error){
+	group, exists := manager.groups[groupName]
+	if !exists{
+		err = fmt.Errorf("group '%s' not exists", groupName)
 		resp <- err
 		return err
 	}
-	delete(manager.groups, name)
-	log.Printf("<user> group '%s' removed", name)
+	for memberName, _ := range group.Members{
+		err = fmt.Errorf("member '%s' attached with group '%s'", memberName, groupName)
+		resp <- err
+		return err
+	}
+	delete(manager.groups, groupName)
+	log.Printf("<user> group '%s' removed", groupName)
 	resp <- nil
 	return manager.saveConfig()
 }
@@ -486,15 +575,23 @@ func (manager *UserManager) handleAddGroupMember(groupName, userName string, res
 		err = fmt.Errorf("member '%s' already in group '%s'", userName, groupName)
 		resp <- err
 		return err
-	}	
-	if _, exists = manager.users[userName];!exists{
+	}
+	user, exists := manager.users[userName]
+	if !exists{
 		err = fmt.Errorf("invalid user '%s'", userName)
 		resp <- err
 		return err
 	}
+	if "" != user.Group{
+		err = fmt.Errorf("user '%s' already joined group '%s'", userName, groupName)
+		resp <- err
+		return err
+	}
+	user.Group = groupName
+	manager.users[userName] = user
 	group.Members[userName] = true
 	manager.groups[groupName] = group
-	log.Printf("<user> add member '%s' to group '%s'", userName, groupName)
+	log.Printf("<user> member '%s' added to group '%s'", userName, groupName)
 	resp <- nil
 	return manager.saveConfig()
 }
@@ -511,14 +608,22 @@ func (manager *UserManager) handleRemoveGroupMember(groupName, userName string, 
 		resp <- err
 		return err
 	}
-	if _, exists = manager.users[userName];!exists{
+	user, exists := manager.users[userName]
+	if !exists{
 		err = fmt.Errorf("invalid user '%s'", userName)
 		resp <- err
 		return err
 	}
+	if user.Group != groupName{
+		err = fmt.Errorf("user '%s' not in group '%s'", userName, groupName)
+		resp <- err
+		return err
+	}
+	user.Group = ""
+	manager.users[userName] = user
 	delete(group.Members, userName)
 	manager.groups[groupName] = group
-	log.Printf("<user> remove member '%s' from group '%s'", userName, groupName)
+	log.Printf("<user> member '%s' removed from group '%s'", userName, groupName)
 	resp <- nil
 	return manager.saveConfig()
 }
@@ -623,6 +728,29 @@ func (manager *UserManager) handleGetUser(name string, resp chan UserResult)  (e
 		err = fmt.Errorf("invalid user '%s'", name)
 		resp <- UserResult{Error:err}
 		return err
+	}
+	if "" != user.Group{
+		group, exists := manager.groups[user.Group]
+		if !exists{
+			err = fmt.Errorf("invalid group '%s' for user '%s'", user.Group, name)
+			resp <- UserResult{Error:err}
+			return err
+		}
+		var menuMap = map[string]bool{}
+		for roleName, _ := range group.Roles{
+			role, exists := manager.roles[roleName]
+			if !exists{
+				err = fmt.Errorf("invalid role '%s' for group '%s'", roleName, user.Group)
+				resp <- UserResult{Error:err}
+				return err
+			}
+			for _, menuName := range role.Menu{
+				menuMap[menuName] = true
+			}
+		}
+		for menuName, _ := range menuMap{
+			user.Menu = append(user.Menu, menuName)
+		}
 	}
 	resp <- UserResult{User:user}
 	return nil

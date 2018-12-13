@@ -723,11 +723,12 @@ func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	type RespSession struct {
-		User string   `json:"user"`
-		Menu []string `json:"menu,omitempty"`
+		User    string   `json:"user"`
+		Menu    []string `json:"menu,omitempty"`
+		Timeout int      `json:"timeout"`
 	}
 	var session = result.Session
-	var payload = RespSession{session.User, session.Menu}
+	var payload = RespSession{session.User, session.Menu, session.Timeout}
 	ResponseOK(payload, w)
 }
 
