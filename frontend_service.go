@@ -58,7 +58,10 @@ func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
 		return
 	}
 	service.reverseProxy = httputil.NewSingleHostReverseProxy(proxyUrl)
-	service.channelManager, _ = CreateChannelManager()
+	service.channelManager, err = CreateChannelManager()
+	if err != nil{
+		return
+	}
 	var router = httprouter.New()
 	service.registerHandler(router)
 	router.ServeFiles("/css/*filepath", http.Dir("resource/css"))
@@ -94,10 +97,14 @@ func (service *FrontEndService)Routine(){
 	log.Printf("<frontend> %s started", CurrentVersion)
 	go service.frontendServer.Serve(service.serviceListener)
 	service.channelManager.Start()
+	service.userManager.Start()
+	service.sessionManager.Start()
 	for !service.IsStopping(){
 		select {
 		case <- service.GetNotifyChannel():
 			log.Println("<frontend> stopping server...")
+			service.sessionManager.Stop()
+			service.userManager.Stop()
 			service.channelManager.Stop()
 			service.SetStopping()
 			//shutdown server
@@ -110,6 +117,7 @@ func (service *FrontEndService)Routine(){
 
 		}
 	}
+
 	service.NotifyExit()
 }
 
@@ -241,11 +249,11 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	router.GET("/user_groups/:group/members/", service.queryGroupMembers)
 	router.POST("/user_groups/:group/members/:user", service.addGroupMember)
-	router.DELETE("/user_groups:group/members/:user", service.removeGroupMember)
+	router.DELETE("/user_groups/:group/members/:user", service.removeGroupMember)
 
 	router.GET("/user_groups/:group/roles/", service.queryGroupRoles)
 	router.POST("/user_groups/:group/roles/:role", service.addGroupRole)
-	router.DELETE("/user_groups:group/roles/:role", service.removeGroupRole)
+	router.DELETE("/user_groups/:group/roles/:role", service.removeGroupRole)
 
 	//users
 	router.GET("/users/", service.queryUsers)
@@ -259,7 +267,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	//sessions
 	router.GET("/sessions/", service.querySessions)
 	router.GET("/sessions/:session", service.getSession)
-	router.POST("/sessions/:session", service.createSession)
+	router.POST("/sessions/", service.createSession)
 	router.PUT("/sessions/:session", service.updateSession)
 
 	////logs
@@ -313,6 +321,9 @@ func (service *FrontEndService) queryRoles(w http.ResponseWriter, r *http.Reques
 		var err = result.Error
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
+	}
+	for _, role := range result.RoleList{
+		data = append(data, role.Name)
 	}
 	ResponseOK(data, w)
 }

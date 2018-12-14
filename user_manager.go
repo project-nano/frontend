@@ -7,7 +7,6 @@ import (
 	"sort"
 	"fmt"
 	"github.com/pkg/errors"
-	"regexp"
 	"crypto/rand"
 	"golang.org/x/crypto/bcrypt"
 	"os"
@@ -31,7 +30,7 @@ type LoginUser struct {
 	Name   string          `json:"name"`
 	Nick   string          `json:"nick,omitempty"`
 	Mail   string          `json:"mail,omitempty"`
-	Group  string          `json:"group,omitempty`
+	Group  string          `json:"group,omitempty"`
 	Secret EncryptedSecret `json:"secret"`
 	Menu   []string        `json:"-"`
 }
@@ -105,7 +104,6 @@ type UserManager struct {
 	users         map[string]LoginUser
 	groups        map[string]UserGroup
 	roles         map[string]UserRole
-	passwordRegex *regexp.Regexp
 	configFile    string
 	commands      chan userCMD
 	framework.SimpleRunner
@@ -123,14 +121,6 @@ func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	manager.users = map[string]LoginUser{}
 	manager.groups = map[string]UserGroup{}
 	manager.roles = map[string]UserRole{}
-	const (
-		exp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\\$%\\^&\\*])(?=.{8,})"
-	)
-	manager.passwordRegex, err = regexp.Compile(exp)
-	if err != nil{
-		return
-	}
-
 	manager.Initial(manager)
 	if err = manager.loadConfig(); err != nil{
 		return
@@ -219,6 +209,7 @@ func (manager *UserManager) saveConfig() (err error){
 		for memberName, _ := range group.Members{
 			groupConfig.Members = append(groupConfig.Members, memberName)
 		}
+		config.Groups = append(config.Groups, groupConfig)
 	}
 	data, err := json.MarshalIndent(config, "", " ")
 	if err != nil{
@@ -762,7 +753,7 @@ func (manager *UserManager) handleCreateUser(name, nick, mail, password string, 
 		resp <- err
 		return err
 	}
-	if err = isSecurePassword(password, manager.passwordRegex); err != nil{
+	if err = isSecurePassword(password); err != nil{
 		resp <- err
 		return err
 	}
@@ -820,7 +811,7 @@ func (manager *UserManager) handleModifyUserPassword(name, old, new string, resp
 		resp <- ObscuredSecretError
 		return err
 	}
-	if err = isSecurePassword(new, manager.passwordRegex); err != nil{
+	if err = isSecurePassword(new); err != nil{
 		resp <- err
 		return err
 	}
@@ -850,7 +841,7 @@ func (manager *UserManager) handleVerifyUserPassword(name, password string, resp
 	return nil
 }
 
-func isSecurePassword(password string, checker *regexp.Regexp) (err error){
+func isSecurePassword(password string) (err error){
 	const (
 		LeastLength = 8
 	)
@@ -858,8 +849,29 @@ func isSecurePassword(password string, checker *regexp.Regexp) (err error){
 		err = fmt.Errorf("length of password must > %d", LeastLength)
 		return
 	}
-	if !checker.MatchString(password){
-		err = errors.New("password must contain one lowercase, one uppercase letter, and one digit")
+	var lower, upper, digit = false, false, false
+	var content = []byte(password)
+	for _, char := range content{
+		if !digit && (char >= 0x30 && char <= 0x39){
+			digit = true
+		}
+		if !lower && (char >= 0x61 && char <= 0x7A){
+			lower = true
+		}
+		if !upper && (char >= 0x41 && char <= 0x5A){
+			upper = true
+		}
+	}
+	if !digit{
+		err = errors.New("must have a digit at least")
+		return
+	}
+	if !lower{
+		err = errors.New("must have a lower letter at least")
+		return
+	}
+	if !upper{
+		err = errors.New("must have a upper letter at least")
 		return
 	}
 	return nil
