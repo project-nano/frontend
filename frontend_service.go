@@ -261,6 +261,8 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	router.PUT("/users/:user/password/", service.modifyUserPassword)
 
+	router.GET("/user_search/*filepath", service.searchUsers)
+
 	//sessions
 	router.GET("/sessions/", service.querySessions)
 	router.GET("/sessions/:session", service.getSession)
@@ -671,6 +673,24 @@ func (service *FrontEndService) modifyUserPassword(w http.ResponseWriter, r *htt
 		return
 	}
 	ResponseOK("", w)
+}
+
+func (service *FrontEndService) searchUsers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	var query = r.URL.Query()
+	var targetGroup = query.Get("group")
+	var payload = make([]string, 0)
+	var respChan = make(chan UserResult, 1)
+	service.userManager.SearchUsers(targetGroup, respChan)
+	var result = <- respChan
+	if result.Error != nil{
+		var err = result.Error
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	for _, user := range result.UserList{
+		payload = append(payload, user.Name)
+	}
+	ResponseOK(payload, w)
 }
 
 //sessions

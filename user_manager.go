@@ -81,6 +81,7 @@ const (
 	cmdDeleteUser
 	cmdModifyUserPassword
 	cmdVerifyUserPassword
+	cmdSearchUser
 )
 
 type userCMD struct {
@@ -280,7 +281,6 @@ func (manager *UserManager) QueryUsers(resp chan UserResult)  {
 	manager.commands <- userCMD{Type: cmdQueryUser, ResultChan:resp}
 }
 
-
 func (manager *UserManager) GetUser(name string, resp chan UserResult)  {
 	manager.commands <- userCMD{Type: cmdGetUser, User:name, ResultChan:resp}
 }
@@ -304,6 +304,11 @@ func (manager *UserManager) ModifyUserPassword(name, old, new string, resp chan 
 func (manager *UserManager) VerifyUserPassword(name, password string, resp chan error)  {
 	manager.commands <- userCMD{Type: cmdVerifyUserPassword, User:name, Challenge:password, ErrorChan:resp}
 }
+
+func (manager *UserManager) SearchUsers(groupName string, resp chan UserResult)  {
+	manager.commands <- userCMD{Type: cmdSearchUser, Group:groupName, ResultChan:resp}
+}
+
 
 func (manager *UserManager) handleCommand(cmd userCMD){
 	var err error
@@ -348,6 +353,8 @@ func (manager *UserManager) handleCommand(cmd userCMD){
 		err = manager.handleModifyUserPassword(cmd.User, cmd.Challenge, cmd.Password, cmd.ErrorChan)
 	case cmdVerifyUserPassword:
 		err = manager.handleVerifyUserPassword(cmd.User, cmd.Challenge, cmd.ErrorChan)
+	case cmdSearchUser:
+		err = manager.handleSearchUsers(cmd.Group, cmd.ResultChan)
 	default:
 		log.Printf("<user> unsupport command type %d", cmd.Type)
 		return 
@@ -765,6 +772,28 @@ func (manager *UserManager) handleVerifyUserPassword(name, password string, resp
 		return err
 	}
 	resp <- nil
+	return nil
+}
+
+func (manager *UserManager) handleSearchUsers(groupName string, resp chan UserResult)  (err error){
+	var names []string
+	for userName, user := range manager.users{
+		if user.Group == groupName{
+			names = append(names, userName)
+		}
+	}
+	sort.Stable(sort.StringSlice(names))
+	var result = make([]LoginUser, 0)
+	for _, userName := range names{
+		user, exists := manager.users[userName]
+		if !exists{
+			err = fmt.Errorf("invalid user %s", userName)
+			resp <- UserResult{Error:err}
+			return err
+		}
+		result = append(result, user)
+	}
+	resp <- UserResult{UserList:result}
 	return nil
 }
 
