@@ -12,6 +12,7 @@ import (
 	"os"
 	"encoding/json"
 	"io/ioutil"
+	"encoding/base64"
 )
 
 type UserRole struct {
@@ -177,6 +178,8 @@ func (manager *UserManager) loadConfig() (err error){
 	}
 	for _, groupConfig := range config.Groups{
 		var group = UserGroup{Name:groupConfig.Name, Display:groupConfig.Display}
+		group.Roles = map[string]bool{}
+		group.Members = map[string]bool{}
 		for _, roleName := range groupConfig.Role{
 			group.Roles[roleName] = true
 		}
@@ -881,11 +884,12 @@ func hashPassword(method cryptMethod, password string) (secret EncryptedSecret, 
 	const (
 		SaltLength = 32
 	)
-	var salt = make([]byte, SaltLength)
-	_, err = rand.Read(salt)
+	var randomData = make([]byte, SaltLength)
+	_, err = rand.Read(randomData)
 	if err != nil{
 		return
 	}
+	var salt = base64.StdEncoding.EncodeToString(randomData)
 	secret.Method = method
 	secret.Salt = string(salt)
 	var input = append([]byte(password), salt...)
