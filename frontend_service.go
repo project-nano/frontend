@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"io/ioutil"
+	"sort"
 )
 
 type FrontEndService struct {
@@ -251,10 +252,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.POST("/user_groups/:group/members/:user", service.addGroupMember)
 	router.DELETE("/user_groups/:group/members/:user", service.removeGroupMember)
 
-	router.GET("/user_groups/:group/roles/", service.queryGroupRoles)
-	router.POST("/user_groups/:group/roles/:role", service.addGroupRole)
-	router.DELETE("/user_groups/:group/roles/:role", service.removeGroupRole)
-
 	//users
 	router.GET("/users/", service.queryUsers)
 	router.GET("/users/:user", service.getUser)
@@ -437,20 +434,30 @@ func (service *FrontEndService) getGroup(w http.ResponseWriter, r *http.Request,
 	type RespGroup struct {
 		Name    string   `json:"name"`
 		Display string   `json:"display"`
+		Role    []string `json:"role,omitempty"`
 		Member  []string `json:"member,omitempty"`
 	}
 	var group = result.Group
 	var payload = RespGroup{Name: group.Name, Display: group.Display}
+	var members, roles []string
 	for memberName, _ := range group.Members{
-		payload.Member = append(payload.Member, memberName)
+		members = append(members, memberName)
 	}
+	for roleName, _ := range group.Roles{
+		roles = append(roles, roleName)
+	}
+	sort.Stable(sort.StringSlice(members))
+	sort.Stable(sort.StringSlice(roles))
+	payload.Role = roles
+	payload.Member = members
 	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	var groupName = params.ByName("group")
 	type RequestData struct {
-		Display string `json:"display"`
+		Display string   `json:"display"`
+		Role    []string `json:"role,omitempty"`
 	}
 	var requestData RequestData
 	var decoder = json.NewDecoder(r.Body)
@@ -460,7 +467,7 @@ func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	var respChan = make(chan error, 1)
-	service.userManager.AddGroup(groupName, requestData.Display, respChan)
+	service.userManager.AddGroup(groupName, requestData.Display, requestData.Role, respChan)
 	err = <- respChan
 	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
@@ -472,7 +479,8 @@ func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request,
 func (service *FrontEndService) modifyGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	var groupName = params.ByName("group")
 	type RequestData struct {
-		Display string `json:"display"`
+		Display string   `json:"display"`
+		Role    []string `json:"role,omitempty"`
 	}
 	var requestData RequestData
 	var decoder = json.NewDecoder(r.Body)
@@ -482,7 +490,7 @@ func (service *FrontEndService) modifyGroup(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var respChan = make(chan error, 1)
-	service.userManager.ModifyGroup(groupName, requestData.Display, respChan)
+	service.userManager.ModifyGroup(groupName, requestData.Display, requestData.Role, respChan)
 	err = <- respChan
 	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
@@ -545,47 +553,6 @@ func (service *FrontEndService) removeGroupMember(w http.ResponseWriter, r *http
 	ResponseOK("", w)
 }
 
-func (service *FrontEndService) queryGroupRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	var groupName = params.ByName("group")
-	var respChan = make(chan UserResult, 1)
-	service.userManager.QueryGroupRoles(groupName, respChan)
-	var result = <- respChan
-	if result.Error != nil{
-		ResponseFail(DefaultServerError, result.Error.Error(), w)
-		return
-	}
-	var payload = make([]string, 0)
-	for _, role := range result.RoleList{
-		payload = append(payload, role.Name)
-	}
-	ResponseOK(payload, w)
-}
-
-func (service *FrontEndService) addGroupRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	var groupName = params.ByName("group")
-	var roleName = params.ByName("role")
-	var respChan = make(chan error, 1)
-	service.userManager.AddGroupRole(groupName, roleName, respChan)
-	var err = <- respChan
-	if err != nil{
-		ResponseFail(DefaultServerError, err.Error(), w)
-		return
-	}
-	ResponseOK("", w)
-}
-
-func (service *FrontEndService) removeGroupRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	var groupName = params.ByName("group")
-	var roleName = params.ByName("role")
-	var respChan = make(chan error, 1)
-	service.userManager.RemoveGroupRole(groupName, roleName, respChan)
-	var err = <- respChan
-	if err != nil{
-		ResponseFail(DefaultServerError, err.Error(), w)
-		return
-	}
-	ResponseOK("", w)
-}
 
 //users
 

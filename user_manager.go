@@ -74,9 +74,6 @@ const (
 	cmdQueryGroupMember
 	cmdAddGroupMember
 	cmdRemoveGroupMember
-	cmdQueryGroupRole
-	cmdAddGroupRole
-	cmdRemoveGroupRole
 	cmdQueryUser
 	cmdGetUser
 	cmdCreateUser
@@ -97,6 +94,7 @@ type userCMD struct {
 	Challenge  string
 	Password   string
 	Menu       []string
+	RoleList   []string
 	ResultChan chan UserResult
 	ErrorChan  chan error
 }
@@ -250,16 +248,16 @@ func (manager *UserManager) QueryGroups(resp chan UserResult)  {
 	manager.commands <- userCMD{Type: cmdQueryGroup, ResultChan:resp}
 }
 
-func (manager *UserManager) AddGroup(name, display string, resp chan error)  {
-	manager.commands <- userCMD{Type: cmdAddGroup, Group:name, Display:display, ErrorChan:resp}
+func (manager *UserManager) AddGroup(name, display string, roleList []string, resp chan error)  {
+	manager.commands <- userCMD{Type: cmdAddGroup, Group:name, Display:display, RoleList:roleList, ErrorChan:resp}
 }
 
 func (manager *UserManager) GetGroup(name string, resp chan UserResult)  {
 	manager.commands <- userCMD{Type: cmdGetGroup, Group:name, ResultChan:resp}
 }
 
-func (manager *UserManager) ModifyGroup(name, display string, resp chan error)  {
-	manager.commands <- userCMD{Type: cmdModifyGroup, Group:name, Display:display, ErrorChan:resp}
+func (manager *UserManager) ModifyGroup(name, display string, roleList []string, resp chan error)  {
+	manager.commands <- userCMD{Type: cmdModifyGroup, Group:name, Display:display, RoleList:roleList, ErrorChan:resp}
 }
 
 func (manager *UserManager) RemoveGroup(name string, resp chan error)  {
@@ -276,18 +274,6 @@ func (manager *UserManager) AddGroupMember(group, user string, resp chan error) 
 
 func (manager *UserManager) RemoveGroupMember(group, user string, resp chan error)  {
 	manager.commands <- userCMD{Type: cmdRemoveGroupMember, Group:group, User:user, ErrorChan:resp}
-}
-
-func (manager *UserManager) QueryGroupRoles(group string,resp chan UserResult)  {
-	manager.commands <- userCMD{Type: cmdQueryGroupRole, Group:group, ResultChan:resp}
-}
-
-func (manager *UserManager) AddGroupRole(group, role string, resp chan error)  {
-	manager.commands <- userCMD{Type: cmdAddGroupRole, Group:group, Role:role, ErrorChan:resp}
-}
-
-func (manager *UserManager) RemoveGroupRole(group, role string, resp chan error)  {
-	manager.commands <- userCMD{Type: cmdRemoveGroupRole, Group:group, Role:role, ErrorChan:resp}
 }
 
 func (manager *UserManager) QueryUsers(resp chan UserResult)  {
@@ -337,9 +323,9 @@ func (manager *UserManager) handleCommand(cmd userCMD){
 	case cmdGetGroup:
 		err = manager.handleGetGroup(cmd.Group, cmd.ResultChan)
 	case cmdAddGroup:
-		err = manager.handleAddGroup(cmd.Group, cmd.Display, cmd.ErrorChan)
+		err = manager.handleAddGroup(cmd.Group, cmd.Display, cmd.RoleList, cmd.ErrorChan)
 	case cmdModifyGroup:
-		err = manager.handleModifyGroup(cmd.Group, cmd.Display, cmd.ErrorChan)
+		err = manager.handleModifyGroup(cmd.Group, cmd.Display, cmd.RoleList, cmd.ErrorChan)
 	case cmdRemoveGroup:
 		err = manager.handleRemoveGroup(cmd.Group, cmd.ErrorChan)
 	case cmdQueryGroupMember:
@@ -348,12 +334,6 @@ func (manager *UserManager) handleCommand(cmd userCMD){
 		err = manager.handleAddGroupMember(cmd.Group, cmd.User, cmd.ErrorChan)
 	case cmdRemoveGroupMember:
 		err = manager.handleRemoveGroupMember(cmd.Group, cmd.User, cmd.ErrorChan)
-	case cmdQueryGroupRole:
-		err = manager.handleQueryGroupRoles(cmd.Group, cmd.ResultChan)
-	case cmdAddGroupRole:
-		err = manager.handleAddGroupRole(cmd.Group, cmd.Role, cmd.ErrorChan)
-	case cmdRemoveGroupRole:
-		err = manager.handleRemoveGroupRole(cmd.Group, cmd.Role, cmd.ErrorChan)
 	case cmdQueryUser:
 		err = manager.handleQueryUsers(cmd.ResultChan)
 	case cmdGetUser:
@@ -476,13 +456,21 @@ func (manager *UserManager) handleQueryGroups(resp chan UserResult)   (err error
 	return nil
 }
 
-func (manager *UserManager) handleAddGroup(name, display string, resp chan error) (err error){
+func (manager *UserManager) handleAddGroup(name, display string, roleList []string, resp chan error) (err error){
 	if _, exists := manager.groups[name]; exists{
 		err = fmt.Errorf("group '%s' already exists", name)
 		resp <- err
 		return err
 	}
 	var group = UserGroup{name, display, map[string]bool{}, map[string]bool{}}
+	for _, roleName := range roleList{
+		if _, exists := manager.roles[roleName]; !exists{
+			err = fmt.Errorf("invalid role '%s'", roleName)
+			resp <- err
+			return err
+		}
+		group.Roles[roleName] = true
+	}
 	manager.groups[name] = group
 	log.Printf("<user> group '%s' added", name)
 	resp <- nil
@@ -500,7 +488,7 @@ func (manager *UserManager) handleGetGroup(name string, resp chan UserResult)  (
 	return nil
 }
 
-func (manager *UserManager) handleModifyGroup(name, display string, resp chan error)  (err error){
+func (manager *UserManager) handleModifyGroup(name, display string, roleList []string, resp chan error)  (err error){
 	group, exists := manager.groups[name];
 	if !exists{
 		err = fmt.Errorf("group '%s' not exists", name)
@@ -508,6 +496,16 @@ func (manager *UserManager) handleModifyGroup(name, display string, resp chan er
 		return err
 	}
 	group.Display = display
+	var roles = map[string]bool{}
+	for _, roleName := range roleList{
+		if _, exists := manager.roles[roleName]; !exists{
+			err = fmt.Errorf("invalid role '%s'", roleName)
+			resp <- err
+			return err
+		}
+		roles[roleName] = true
+	}
+	group.Roles = roles
 	manager.groups[name] = group
 	log.Printf("<user> group '%s' modified", name)
 	resp <- nil
@@ -618,80 +616,6 @@ func (manager *UserManager) handleRemoveGroupMember(groupName, userName string, 
 	delete(group.Members, userName)
 	manager.groups[groupName] = group
 	log.Printf("<user> member '%s' removed from group '%s'", userName, groupName)
-	resp <- nil
-	return manager.saveConfig()
-}
-
-func (manager *UserManager) handleQueryGroupRoles(groupName string,resp chan UserResult)  (err error){
-	group, exists := manager.groups[groupName]
-	if !exists{
-		err = fmt.Errorf("invalid group '%s'", groupName)
-		resp <- UserResult{Error:err}
-		return err
-	}
-	var names []string
-	for roleName, _ := range group.Roles{
-		names = append(names, roleName)
-	}
-	sort.Stable(sort.StringSlice(names))
-	var roleList []UserRole
-	for _, roleName := range names{
-		role, exists := manager.roles[roleName]
-		if !exists{
-			err = fmt.Errorf("invalid role '%s'", roleName)
-			resp <- UserResult{Error:err}
-			return err
-		}
-		roleList = append(roleList, role)
-	}
-	resp <- UserResult{RoleList:roleList}
-	return nil
-}
-
-func (manager *UserManager) handleAddGroupRole(groupName, roleName string, resp chan error)  (err error){
-	group, exists := manager.groups[groupName]
-	if !exists{
-		err = fmt.Errorf("invalid group '%s'", groupName)
-		resp <- err
-		return err
-	}
-	if _, exists := group.Roles[roleName]; exists{
-		err = fmt.Errorf("role '%s' already in group '%s'", roleName, groupName)
-		resp <- err
-		return err
-	}
-	if _, exists = manager.roles[roleName];!exists{
-		err = fmt.Errorf("invalid role '%s'", roleName)
-		resp <- err
-		return err
-	}
-	group.Roles[roleName] = true
-	manager.groups[groupName] = group
-	log.Printf("<user> add role '%s' to group '%s'", roleName, groupName)
-	resp <- nil
-	return manager.saveConfig()
-}
-
-func (manager *UserManager) handleRemoveGroupRole(groupName, roleName string, resp chan error)  (err error){
-	group, exists := manager.groups[groupName]
-	if !exists{
-		err = fmt.Errorf("invalid group '%s'", groupName)
-		resp <- err
-		return err
-	}
-	if _, exists := group.Roles[roleName]; !exists{
-		err = fmt.Errorf("role '%s' not in group '%s'", roleName, groupName)
-		resp <- err
-		return err
-	}
-	if _, exists = manager.roles[roleName];!exists{
-		err = fmt.Errorf("invalid role '%s'", roleName)
-		resp <- err
-		return err
-	}
-	delete(group.Roles, roleName)
-	manager.groups[groupName] = group
-	log.Printf("<user> remove role '%s' from group '%s'", roleName, groupName)
 	resp <- nil
 	return manager.saveConfig()
 }
