@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"encoding/base64"
+	"regexp"
 )
 
 type UserRole struct {
@@ -101,11 +102,12 @@ type userCMD struct {
 }
 
 type UserManager struct {
-	users         map[string]LoginUser
-	groups        map[string]UserGroup
-	roles         map[string]UserRole
-	configFile    string
-	commands      chan userCMD
+	users      map[string]LoginUser
+	groups     map[string]UserGroup
+	roles      map[string]UserRole
+	configFile string
+	nameRegex  *regexp.Regexp
+	commands   chan userCMD
 	framework.SimpleRunner
 }
 
@@ -114,6 +116,7 @@ var ObscuredSecretError = errors.New("invalid user or password")
 func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	const (
 		ConfigName = "users.data"
+		NameRegexp = "[^\\da-zA-Z-_.]"
 	)
 	manager = &UserManager{}
 	manager.configFile = filepath.Join(configPath, ConfigName)
@@ -121,6 +124,10 @@ func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	manager.users = map[string]LoginUser{}
 	manager.groups = map[string]UserGroup{}
 	manager.roles = map[string]UserRole{}
+	manager.nameRegex, err = regexp.Compile(NameRegexp)
+	if err != nil{
+		return
+	}
 	manager.Initial(manager)
 	if err = manager.loadConfig(); err != nil{
 		return
@@ -183,6 +190,14 @@ func (manager *UserManager) loadConfig() (err error){
 			group.Roles[roleName] = true
 		}
 		for _, memberName := range groupConfig.Members{
+			if user, exists := manager.users[memberName]; !exists{
+				err = fmt.Errorf("invalid member '%s' in group '%s'", memberName, group.Name)
+				return
+			}else{
+				user.Group = group.Name
+				manager.users[memberName] = user
+			}
+
 			group.Members[memberName] = true
 		}
 		manager.groups[group.Name] = group
@@ -386,6 +401,10 @@ func (manager *UserManager) handleQueryRoles(resp chan UserResult) (err error){
 }
 
 func (manager *UserManager) handleAddRole(name string, menu []string, resp chan error) (err error){
+	if err = manager.validateName(name); err != nil{
+		resp <- err
+		return
+	}
 	if _, exists := manager.roles[name]; exists{
 		err = fmt.Errorf("role '%s' already exists", name)
 		resp <- err
@@ -464,6 +483,11 @@ func (manager *UserManager) handleQueryGroups(resp chan UserResult)   (err error
 }
 
 func (manager *UserManager) handleAddGroup(name, display string, roleList []string, resp chan error) (err error){
+	if err = manager.validateName(name); err != nil{
+		resp <- err
+		return
+	}
+
 	if _, exists := manager.groups[name]; exists{
 		err = fmt.Errorf("group '%s' already exists", name)
 		resp <- err
@@ -682,6 +706,11 @@ func (manager *UserManager) handleGetUser(name string, resp chan UserResult)  (e
 }
 
 func (manager *UserManager) handleCreateUser(name, nick, mail, password string, resp chan error)  (err error){
+	if err = manager.validateName(name); err != nil{
+		resp <- err
+		return
+	}
+
 	if _, exists := manager.users[name]; exists{
 		err = fmt.Errorf("user '%s' already exists", name)
 		resp <- err
@@ -794,6 +823,15 @@ func (manager *UserManager) handleSearchUsers(groupName string, resp chan UserRe
 		result = append(result, user)
 	}
 	resp <- UserResult{UserList:result}
+	return nil
+}
+
+func (manager *UserManager) validateName(name string) (err error){
+	var matched = manager.nameRegex.FindStringSubmatch(name)
+	if 0 != len(matched){
+		err = fmt.Errorf("invalid char '%s' (only letters/digit/'-'/'_'/'.' allowed)", matched[0])
+		return err
+	}
 	return nil
 }
 
