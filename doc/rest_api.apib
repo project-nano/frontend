@@ -1695,3 +1695,417 @@ create channel for monitor and control instance. Create a new temporary channel 
       ]
     }
   ]
+
+# Group FrontEnd Management
+
+## Role [/roles/{role_name}]
+
++ Parameters
+  + role_name (string, optional) - name of user role
+
+### List Roles [GET /roles/]
+
+list all use roles
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        "maintainer",
+        "auditor",
+        "user"
+      ]
+    }
+  ]
+
+### Get Role [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "menu": ["dashboard", "compute_pool", "address_pool", "instance"],
+        "resource": []
+      }
+    }
+  ]
+
+### Add Role [POST]
+
+add new to system
+
++ Request Add Role (application/json)
+
+  + Attributes
+    + menu (array[string]) - menu list role can access
+
+  + Body
+
+    {
+      "menu": ["dashboard", "compute_pool", "address_pool", "instance"]
+    }
+
+
+### Modify Role [PUT]
+
+modify current authentication
+
++ Request Modify Role (application/json)
+
+  + Attributes
+    + menu (array[string]) - menu list role can access
+
+  + Body
+
+    {
+      "menu": ["dashboard", "compute_pool", "address_pool", "instance"]
+    }
+
+### Remove Role [DELETE]
+
+## User Group [/user_groups/{group_name}]
+
++ Parameters
+  + group_name (string, optional) - name of user group
+
+### List Groups [GET /user_groups/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "manager_group",
+          "display": "Group of Manager",
+          "member": 3
+        },
+        {
+          "name": "auditor_group",
+          "display": "Group of Auditor",
+          "member": 1
+        },
+        {
+          "name": "user_group",
+          "display": "Group of User",
+          "member": 10
+        }
+      ]
+    }
+  ]
+
+### Get Group [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "manager_group",
+        "display": "Group of Manager",
+        "role": ["manager", "user"],
+        "member": [
+          "admin",
+          "nano",
+          "akumas"
+        ]
+      }
+    }
+  ]
+
+### Add Group [POST]
+
++ Request Add Group (application/json)
+
+  + Attributes
+    + display (string) - display name of group
+    + role (array[string], optional) - list of role name
+
+  + Body
+
+    {
+      "display": "Group of Manager",
+      "role": ["manager", "user"]
+    }
+
+### Modify Group [PUT]
+
++ Request Modify Group (application/json)
+
+  + Attributes
+    + display (string, optional) - display name of group
+    + role (array[string], optional) - list of role name
+
+  + Body
+
+    {
+      "display": "Group of Manager",
+      "role": ["manager", "user"]
+    }
+
+### Remove Group [DELETE]
+
+## Group Member [/user_groups/{group_name}/members/{user_name}]
+
++ Parameters
+  + group_name (string) - name of user group
+  + user_name (string, optional) - user name
+
+### List Member [GET /user_groups/{group_name}/members/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        "admin",
+        "nano",
+        "akumas"
+      ]
+    }
+  ]
+
+### Add Member [POST]
+
+### Remove Member [DELETE]
+
+## User [/users/{user_name}]
+
++ Parameters
+  + user_name (string, optional) - user name
+
+### List Users [GET /users/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        "admin",
+        "nano",
+        "akumas"
+      ]
+    }
+  ]
+
+### Get User Info [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "nick": "AK",
+        "mail": "a@b.com"
+      }
+    }
+  ]
+
+### Create New User [POST]
+
++ Request Create New user (application/json)
+
+  + Attributes
+    + nick (string, optional) - nick name for display
+    + mail (string, optional) - user email
+    + password (string) - user password
+
+  + Body
+
+    {
+      "nick": "AK",
+      "mail": "a@b.com",
+      "password": "abcdefg"
+    }
+
+### Modify User [PUT]
+
++ Request Modify user (application/json)
+
+  + Attributes
+    + nick (string, optional) - nick name for display
+    + mail (string, optional) - user email
+
+  + Body
+
+    {
+      "nick": "AK",
+      "mail": "a@b.com"
+    }
+
+### Delete User [DELETE]
+
+## User Password [/users/{user_name}/password/]
+
++ Parameters
+  + user_name (string, optional) - user name
+
+### Modify Password [PUT]
+
++ Request Modify Password (application/json)
+
+  + Attributes
+    + old (string) - old password for verify
+    + new (string) - new password
+
+  + Body
+
+    {
+      "old": "123456",
+      "new": "abcdef"
+    }
+
+## User Search [/user_search/]
+
+### Search User [GET]
+
++ Parameters
+
+  + group (string, optional) - user group
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        "nano",
+        "alex",
+        "sam"
+        ]
+      }
+    ]
+
+## Sessions [/sessions/{session_id}]
+
+Manage authenticated session
+
++ Parameters
+  + session_id (string, optional) - session ID
+
+### List session [GET /sessions/]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        "bsu6384js3=",
+        "bsu633jtq84",
+        "bsu638skjfu"
+      ]
+    }
+  ]
+
+
+### Auth Session [POST /sessions/]
+
++ Request Auth New Session (application/json)
+
+  + Attributes
+    + user (string) - user name
+    + password (string) - new password
+    + nonce (string) - nonce for crypt
+
+  + Body
+
+    {
+      "user": "alex",
+      "password": "abcdef",
+      "nonce": "1234567890"
+    }
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "session": "bsu6384js3="
+      }
+    }
+  ]
+
+### Update Session [PUT]
+
+### Obtain Session Authentication [GET]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "menu": ["dashboard", "compute_pool", "address_pool", "instance"],
+        "resource": [],
+        "user": "nano"
+      }
+    }
+  ]
+
+## Logs [/logs/]
+
+### Query Log Entry [GET]
+
++ Parameters
+
+  + limit (number) - max entries returned
+  + start (number, optional) - start offset
+  + after (string, optional) - query logs after this date
+  + before (string, optional) - query logs before this date
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "time": "2018-12-01 14:57:39",
+          "content": "admin create new user example"
+        },
+        {
+          "time": "2018-12-03 14:27:19",
+          "content": "nano.sabrina create new guest nano.test1"
+        }
+
+      ]
+    }
+  ]
+
+### Add Log Entry [POST]
+
++ Request Add Log (application/json)
+
+  + Attributes
+    + format (string, optional) - format of content
+    + content (string) - log content
+
+  + Body
+
+    {
+      "format": "string",
+      "content": "here is a new log for somebody creating a new instance"
+    }

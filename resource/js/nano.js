@@ -145,6 +145,17 @@ N.TagAddressRange = "address_range";
 N.TagAllocated = "allocated";
 N.TagGateway = "gateway";
 N.TagDNS = "dns";
+N.TagRole = "role";
+N.TagUserGroup = "user_group";
+N.TagDisplayName = "display_name";
+N.TagMember = "member";
+N.TagNickname = "nickname";
+N.TagMail = "mail";
+
+N.TagCurrent = "current";
+N.TagPrevious = "previous";
+N.TagNext = "next";
+N.TagNew = "new";
 
 //Language name
 N.zh_CN = "zh_CN";
@@ -259,7 +270,17 @@ var zh_CN_text = new TextSet(new Map([
   [N.TagAddressRange, "地址范围"],
   [N.TagAllocated, "已分配"],
   [N.TagGateway, "网关"],
-  [N.TagDNS, "域名服务器"]
+  [N.TagDNS, "域名服务器"],
+  [N.TagRole, "角色"],
+  [N.TagUserGroup, "用户组"],
+  [N.TagDisplayName, "显示名称"],
+  [N.TagMember, "成员"],
+  [N.TagNickname, "昵称"],
+  [N.TagMail, "邮箱"],
+  [N.TagCurrent, "当前"],
+  [N.TagPrevious, "上一个"],
+  [N.TagNext, "下一个"],
+  [N.TagNew, "新"]
 ]));
 
 var en_US_text = new TextSet(new Map([
@@ -371,7 +392,17 @@ var en_US_text = new TextSet(new Map([
   [N.TagAddressRange, "Address Range"],
   [N.TagAllocated, "Allocated"],
   [N.TagGateway, "Gateway"],
-  [N.TagDNS, "DNS"]
+  [N.TagDNS, "DNS"],
+  [N.TagRole, "Role"],
+  [N.TagUserGroup, "User Group"],
+  [N.TagDisplayName, "Display Name"],
+  [N.TagMember, "Member"],
+  [N.TagNickname, "Nickname"],
+  [N.TagMail, "Mail"],
+  [N.TagCurrent, "Current "],
+  [N.TagPrevious, "Previous "],
+  [N.TagNext, "Next"],
+  [N.TagNew, "New "]
 ]));
 
 //initial text sets
@@ -428,7 +459,7 @@ N.CreateMenuAndFooter = function(){
     ['instances.html', 'cloud', this.TagInstance],
     ['images.html', 'content_copy', this.TagImage],
     ['medias.html', 'album', this.TagMedia],
-    ['#', 'people', this.TagUser]
+    ['users.html', 'people', this.TagUser]
   ];
   var texts = this.GetTexts();
   var menu = $('<ul>').addClass('right');
