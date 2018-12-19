@@ -775,9 +775,11 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 			return
 		}
 		type RespSession struct {
-			Session string `json:"session"`
+			Session string   `json:"session"`
+			Timeout int      `json:"timeout"`
+			Menu    []string `json:"menu"`
 		}
-		var payload = RespSession{result.Session.ID}
+		var payload = RespSession{result.Session.ID, result.Session.Timeout, result.Session.Menu}
 		ResponseOK(payload, w)
 	}
 }
