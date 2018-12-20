@@ -27,12 +27,23 @@ type FrontEndService struct {
 	channelManager  *ChannelManager
 	sessionManager  *SessionManager
 	userManager     *UserManager
+	userInitialed   bool
+	fileHandler     http.Handler
 	framework.SimpleRunner
+}
+
+type Proxy struct {
+	service *FrontEndService
 }
 
 const (
 	CurrentVersion = "0.7.1"
 )
+
+
+func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request){
+	proxy.service.handleFileRequest(w, r)
+}
 
 func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
 	var configFile = filepath.Join(configPath, ConfigFileName)
@@ -67,7 +78,8 @@ func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
 	service.registerHandler(router)
 	router.ServeFiles("/css/*filepath", http.Dir("resource/css"))
 	router.ServeFiles("/js/*filepath", http.Dir("resource/js"))
-	router.NotFound = http.FileServer(http.Dir("resource"))
+
+	router.NotFound = &Proxy{service}
 
 	service.frontendServer.Handler = router
 	service.Initial(service)
@@ -80,6 +92,8 @@ func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
 	if err != nil{
 		return
 	}
+	service.userInitialed = service.userManager.IsUserAvailable()
+	service.fileHandler = http.FileServer(http.Dir("resource"))
 	return
 }
 
@@ -146,6 +160,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	}
 
 	router.GET("/", service.defaultLandingPage)
+	router.GET("/initial.html", service.initialSystem)
 	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
 	router.POST("/monitor_channels/", service.handleCreateChannel)
 
@@ -274,16 +289,46 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	//router.POST("/logs/", service.addLog)
 }
 
-func (service *FrontEndService)defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	const(
 		DefaultURL = "/dashboard.html"
 	)
 	http.Redirect(w, r, DefaultURL, http.StatusMovedPermanently)
 }
 
-func (service *FrontEndService)redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
+}
+
+func (service *FrontEndService) handleFileRequest(w http.ResponseWriter, r *http.Request){
+	if !service.userInitialed{
+		//need initial
+		var resp = make(chan error, 1)
+		service.userManager.IsInitialed(resp)
+		var err = <- resp
+		if err != nil{
+			//not initialed
+			const initialPage = "initial.html"
+			log.Printf("<frontend> redirect to initial page '%s'", initialPage)
+			http.Redirect(w, r, initialPage, http.StatusTemporaryRedirect)
+			return
+		}else{
+			log.Println("<frontend> system initialed")
+			service.userInitialed = true
+		}
+	}
+	service.fileHandler.ServeHTTP(w, r)
+}
+
+func (service *FrontEndService) initialSystem(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if !service.userInitialed{
+		service.fileHandler.ServeHTTP(w, r)
+		return
+	}
+	const loginPage = "/login.html"
+	log.Printf("<frontend> redirect initial request to login page: %s", loginPage)
+	http.Redirect(w, r, loginPage, http.StatusTemporaryRedirect)
 }
 
 

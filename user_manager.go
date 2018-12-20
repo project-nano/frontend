@@ -163,6 +163,10 @@ type UserConfig struct {
 	Users  []LoginUser   `json:"users,omitempty"`
 }
 
+func (manager *UserManager) IsUserAvailable() bool{
+	return  0 != len(manager.users)
+}
+
 func (manager *UserManager) loadConfig() (err error){
 	if _, err = os.Stat(manager.configFile);os.IsNotExist(err){
 		log.Printf("<user> user data '%s' not available", manager.configFile)
@@ -834,7 +838,7 @@ func (manager *UserManager) handleSearchUsers(groupName string, resp chan UserRe
 }
 
 func (manager *UserManager) handleIsInitialed(resp chan error)  (err error) {
-	if 0 == len(manager.users){
+	if !manager.IsUserAvailable(){
 		err = errors.New("system not initial")
 		resp <- err
 	}else{

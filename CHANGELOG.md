@@ -8,6 +8,8 @@
 
 - Session authenticate and manage
 
+- Invoke system initial page when no use configured
+
 ## [0.6.1] - 2018-11-30
 
 ### Added
