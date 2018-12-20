@@ -83,6 +83,7 @@ const (
 	cmdModifyUserPassword
 	cmdVerifyUserPassword
 	cmdSearchUser
+	cmdIsInitialed
 )
 
 type userCMD struct {
@@ -324,6 +325,10 @@ func (manager *UserManager) SearchUsers(groupName string, resp chan UserResult) 
 	manager.commands <- userCMD{Type: cmdSearchUser, Group:groupName, ResultChan:resp}
 }
 
+func (manager *UserManager) IsInitialed(resp chan error)  {
+	manager.commands <- userCMD{Type: cmdIsInitialed, ErrorChan:resp}
+}
+
 
 func (manager *UserManager) handleCommand(cmd userCMD){
 	var err error
@@ -370,6 +375,8 @@ func (manager *UserManager) handleCommand(cmd userCMD){
 		err = manager.handleVerifyUserPassword(cmd.User, cmd.Challenge, cmd.ErrorChan)
 	case cmdSearchUser:
 		err = manager.handleSearchUsers(cmd.Group, cmd.ResultChan)
+	case cmdIsInitialed:
+		err = manager.handleIsInitialed(cmd.ErrorChan)
 	default:
 		log.Printf("<user> unsupport command type %d", cmd.Type)
 		return 
@@ -826,10 +833,20 @@ func (manager *UserManager) handleSearchUsers(groupName string, resp chan UserRe
 	return nil
 }
 
+func (manager *UserManager) handleIsInitialed(resp chan error)  (err error) {
+	if 0 == len(manager.users){
+		err = errors.New("system not initial")
+		resp <- err
+	}else{
+		resp <- nil
+	}
+	return nil
+}
+
 func (manager *UserManager) validateName(name string) (err error){
 	var matched = manager.nameRegex.FindStringSubmatch(name)
 	if 0 != len(matched){
-		err = fmt.Errorf("invalid char '%s' (only letters/digit/'-'/'_'/'.' allowed)", matched[0])
+		err = fmt.Errorf("invalid char '%s' in name (only letters/digit/'-'/'_'/'.' allowed)", matched[0])
 		return err
 	}
 	return nil
@@ -857,15 +874,15 @@ func isSecurePassword(password string) (err error){
 		}
 	}
 	if !digit{
-		err = errors.New("must have a digit at least")
+		err = errors.New("password must have a digit at least")
 		return
 	}
 	if !lower{
-		err = errors.New("must have a lower letter at least")
+		err = errors.New("password must have a lower letter at least")
 		return
 	}
 	if !upper{
-		err = errors.New("must have a upper letter at least")
+		err = errors.New("password must have a upper letter at least")
 		return
 	}
 	return nil
