@@ -40,7 +40,7 @@
 <script type="text/javascript" src="/js/jquery-3.3.1.min.js"></script>
 <script type="text/javascript" src="js/nano.js"></script>
 <script>
-    N.CreateMenuAndFooter();
+    N.ValidateSession();
     var texts = N.GetTexts();
     $('#btn-upload').append(texts.get(N.TagUpload));
     $('.modal-footer > a:first-child').text(texts.get(N.TagCancel));

@@ -38,19 +38,10 @@
 <script type="text/javascript" src="js/materialize.min.js"></script>
 <script type="text/javascript" src="js/nano.js"></script>
 <script>
-    N.CreateMenuAndFooter();
+    N.ValidateSession();
     var texts = N.GetTexts();
     var nameExp = new RegExp('[^\\w-.]');
-    var menuList = [
-      ["dashboard", texts.get(N.TagDashboard)],
-      ["compute_pool", texts.get(N.TagComputePool)],
-      ["address_pool", texts.get(N.TagAddressPool)],
-      ["storage_pool", texts.get(N.TagStoragePool)],
-      ["instance", texts.get(N.TagInstance)],
-      ["image", texts.get(N.TagImage)],
-      ["media", texts.get(N.TagMedia)],
-      ["user", texts.get(N.TagUser)]
-    ];
+    var menuList = N.GetAllMenus();
 
 
     $(function(){
@@ -427,6 +418,15 @@
     }
 
     function showDeleteUser(name){
+      var currentUser = N.GetCurrentUser();
+      if (!currentUser){
+        M.toast({html: 'invalid current user'});
+        return
+      }
+      if (name == currentUser){
+        M.toast({html: 'can not delete current user'});
+        return
+      }
       $('#modal-content').empty().append(
         $('<h4>').text('Delete User')
       ).append(
