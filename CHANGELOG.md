@@ -10,6 +10,8 @@
 
 - Invoke system initial page when no use configured
 
+- Enable reset system
+
 ## [0.6.1] - 2018-11-30
 
 ### Added

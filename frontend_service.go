@@ -176,6 +176,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guest_search/*filepath", GET)
 	redirect(router, "/guest/:id/cores", PUT)
 	redirect(router, "/guest/:id/memory", PUT)
+	redirect(router, "/guest/:id/system/", PUT)
 	redirect(router, "/guest/:id/auth", PUT)
 	redirect(router, "/guest/:id/auth", GET)
 	redirect(router, "/guest/:id/disks/resize/:index", PUT)
