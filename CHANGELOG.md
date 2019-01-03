@@ -6,11 +6,15 @@
 
 - Role/Group/User management
 
-- Session authenticate and manage
+- Session management
 
-- Invoke system initial page when no use configured
+- Invoke system initial page when no user configured
 
 - Enable reset system
+
+- Add "legacy system" option when create new instance
+
+- Add uptime to dashboard.html
 
 ## [0.6.1] - 2018-11-30
 
