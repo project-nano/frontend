@@ -332,7 +332,8 @@ Modify stoarge pool, only empty pool allowed(no volumes available)
         "read_speed": 8634,
         "write_speed": 3673,
         "receive_speed": 7634,
-        "send_speed": 2643
+        "send_speed": 2643,
+        "start_time": "2018-01-02 15:04:05"
       }
     }
   ]
@@ -1088,6 +1089,21 @@ modify some config
 
     {
       "immediate": false
+    }
+
+## Guest System [/guest/{id}/system/]
+
+### Reset Guest System [PUT]
+
++ Request Reset Guest System (application/json)
+
+  + Attributes
+    + from_image (string) - id of new system image
+
+  + Body
+
+    {
+      "from_image": "0123456789-abcdef"
     }
 
 ## Guest User Auth [/guest/{id}/auth]

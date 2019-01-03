@@ -353,6 +353,16 @@
                     $('<i>').addClass('material-icons').text('cloud_upload')
                   )
               );
+              var resetURL = 'reset_system.html?instance=' + instanceID + '&name=' + instanceName + '&pool=' + poolName;
+              if(cellName){
+                resetURL += cellName;
+              }              
+              operators.append(
+                $('<a>').attr('href', resetURL).addClass('blue-grey-text tooltipped').attr('data-position', 'top').
+                  attr('data-tooltip', texts.get(N.TagResetSystem)).attr('target', '_self').append(
+                    $('<i>').addClass('material-icons').text('replay')
+                  )
+              );
               operators.append(
                 $('<a>').attr('href', '#').attr('onclick', 'confirmDelete("' + instanceName + '","' + instanceID + '")').addClass('blue-grey-text tooltipped').attr('data-position', 'top').
                   attr('data-tooltip', texts.get(N.TagDelete)).append(

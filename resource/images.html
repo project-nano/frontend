@@ -135,9 +135,11 @@
           result['data'].forEach((image) =>{
             var content = $('<div>').addClass('card-content');
             var tags = $('<div>');
-            image['tags'].forEach((tag) =>{
-              tags.append($('<div>').addClass('chip').text(tag));
-            });
+            if (image['tags']){
+              image['tags'].forEach((tag) =>{
+                tags.append($('<div>').addClass('chip').text(tag));
+              });
+            }
             var imageSize = image['size'];
             var sizeString;
             if (imageSize > (1 << 30)){

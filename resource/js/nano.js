@@ -157,10 +157,14 @@ N.TagPrevious = "previous";
 N.TagNext = "next";
 N.TagNew = "new";
 N.TagLogin = "login";
+N.TagLogout = "logout";
+N.TagResetSystem = "reset_system";
 
 //Language name
 N.zh_CN = "zh_CN";
 N.en_US = "en_US";
+
+N._session_tag = "nano-session";
 
 var zh_CN_text = new TextSet(new Map([
   [N.TagDashboard, "仪表盘"],
@@ -282,7 +286,9 @@ var zh_CN_text = new TextSet(new Map([
   [N.TagPrevious, "上一个"],
   [N.TagNext, "下一个"],
   [N.TagNew, "新"],
-  [N.TagLogin, "登录"]
+  [N.TagLogin, "登录"],
+  [N.TagLogout, "注销"],
+  [N.TagResetSystem, "重置系统"]
 ]));
 
 var en_US_text = new TextSet(new Map([
@@ -405,7 +411,9 @@ var en_US_text = new TextSet(new Map([
   [N.TagPrevious, "Previous "],
   [N.TagNext, "Next"],
   [N.TagNew, "New "],
-  [N.TagLogin, "Login"]
+  [N.TagLogin, "Login"],
+  [N.TagLogout, "Logout"],
+  [N.TagResetSystem, "Reset System"]
 ]));
 
 //initial text sets
@@ -464,6 +472,7 @@ N.GetTexts = function(){
 }
 
 function _redirectToLogin(){
+  localStorage.setItem(N._session_tag, "");
   var target = '/login.html?previous=' + encodeURIComponent(window.location.pathname);
   window.location.replace(target);
 }
@@ -488,17 +497,23 @@ function _updateSession(sessionID){
   });
 }
 
+function _logoutSession(){
+  localStorage.setItem(N._session_tag, "");
+  var target = '/login.html';
+  window.location.replace(target);
+}
+
 N.SaveSession = function(id, user, menu, timeout){
   var session = new Object();
   session.id = id;
   session.user = user;
   session.menu = menu;
   session.timeout = timeout;
-  sessionStorage.setItem('session', JSON.stringify(session));
+  localStorage.setItem(N._session_tag, JSON.stringify(session));
 }
 
 N.GetCurrentUser = function(){
-  var sessionString = sessionStorage.getItem('session');
+  var sessionString = localStorage.getItem(N._session_tag);
   if (!sessionString || 0 == sessionString.length){
     return null;
   }
@@ -507,7 +522,7 @@ N.GetCurrentUser = function(){
 }
 
 N.ValidateSession = function(){
-  var sessionString = sessionStorage.getItem('session');
+  var sessionString = localStorage.getItem(N._session_tag);
   if (!sessionString || 0 == sessionString.length){
     //no session available
     _redirectToLogin();
@@ -619,6 +634,10 @@ N.CreateMenuAndFooter = function(userName, menuList){
     rightDiv.append(
       $('<div>').addClass('col m2 push-m8').append(
         $('<label>').addClass('white-text').text(texts.get(this.TagCurrent) + texts.get(this.TagUser) + ': ' + userName)
+      ).append(
+        $('<a>').addClass('btn-small btn-flat').attr('onclick', '_logoutSession()').append(
+          $('<i>').addClass('material-icons white-text').text('exit_to_app')
+        )
       )
     );
   }
