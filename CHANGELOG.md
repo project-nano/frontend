@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.8.1] - 2019-02-14
+
+### Added
+
+- Check resource path
+
+### Changed
+
+- Locate resource using ABS path
+
+- Suit new runable implement
+
 ## [0.7.1] - 2018-12-11
 
 ### Added

@@ -29,7 +29,7 @@ type FrontEndService struct {
 	userManager     *UserManager
 	userInitialed   bool
 	fileHandler     http.Handler
-	framework.SimpleRunner
+	runner          *framework.SimpleRunner
 }
 
 type Proxy struct {
@@ -37,7 +37,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion = "0.7.1"
+	CurrentVersion = "0.8.1"
 )
 
 
@@ -45,7 +45,7 @@ func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	proxy.service.handleFileRequest(w, r)
 }
 
-func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
+func CreateFrontEnd(configPath, resoucePath string) (service *FrontEndService, err error ) {
 	var configFile = filepath.Join(configPath, ConfigFileName)
 	data, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -76,13 +76,17 @@ func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
 	}
 	var router = httprouter.New()
 	service.registerHandler(router)
-	router.ServeFiles("/css/*filepath", http.Dir("resource/css"))
-	router.ServeFiles("/js/*filepath", http.Dir("resource/js"))
+	const (
+		CSSPath = "css"
+		JSPath = "js"
+	)
+	router.ServeFiles("/css/*filepath", http.Dir(filepath.Join(resoucePath, CSSPath)))
+	router.ServeFiles("/js/*filepath", http.Dir(filepath.Join(resoucePath, JSPath)))
 
 	router.NotFound = &Proxy{service}
 
 	service.frontendServer.Handler = router
-	service.Initial(service)
+	service.runner = framework.CreateSimpleRunner(service.Routine)
 
 	service.userManager, err = CreateUserManager(configPath)
 	if err != nil{
@@ -93,7 +97,7 @@ func CreateFrontEnd(configPath string) (service *FrontEndService, err error ) {
 		return
 	}
 	service.userInitialed = service.userManager.IsUserAvailable()
-	service.fileHandler = http.FileServer(http.Dir("resource"))
+	service.fileHandler = http.FileServer(http.Dir(resoucePath))
 	return
 }
 
@@ -108,20 +112,28 @@ func (service *FrontEndService) GetVersion() string{
 	return CurrentVersion
 }
 
-func (service *FrontEndService)Routine(){
+func (service *FrontEndService) Start() error{
+	return service.runner.Start()
+}
+
+func (service *FrontEndService) Stop() error{
+	return service.runner.Stop()
+}
+
+func (service *FrontEndService) Routine(c framework.RoutineController){
 	log.Printf("<frontend> %s started", CurrentVersion)
 	go service.frontendServer.Serve(service.serviceListener)
 	service.channelManager.Start()
 	service.userManager.Start()
 	service.sessionManager.Start()
-	for !service.IsStopping(){
+	for !c.IsStopping(){
 		select {
-		case <- service.GetNotifyChannel():
+		case <- c.GetNotifyChannel():
 			log.Println("<frontend> stopping server...")
 			service.sessionManager.Stop()
 			service.userManager.Stop()
 			service.channelManager.Stop()
-			service.SetStopping()
+			c.SetStopping()
 			//shutdown server
 			ctx, _ := context.WithCancel(context.TODO())
 			if err := service.frontendServer.Shutdown(ctx);err != nil{
@@ -133,7 +145,7 @@ func (service *FrontEndService)Routine(){
 		}
 	}
 
-	service.NotifyExit()
+	c.NotifyExit()
 }
 
 func (service *FrontEndService)registerHandler(router *httprouter.Router){

@@ -109,7 +109,7 @@ type UserManager struct {
 	configFile string
 	nameRegex  *regexp.Regexp
 	commands   chan userCMD
-	framework.SimpleRunner
+	runner     *framework.SimpleRunner
 }
 
 var ObscuredSecretError = errors.New("invalid user or password")
@@ -129,24 +129,31 @@ func CreateUserManager(configPath string)  (manager *UserManager, err error){
 	if err != nil{
 		return
 	}
-	manager.Initial(manager)
+	manager.runner = framework.CreateSimpleRunner(manager.Routine)
 	if err = manager.loadConfig(); err != nil{
 		return
 	}
 	return manager, nil
 }
+func (manager *UserManager) Start() error{
+	return manager.runner.Start()
+}
 
-func (manager *UserManager) Routine(){
+func (manager *UserManager) Stop() error{
+	return manager.runner.Stop()
+}
+
+func (manager *UserManager) Routine(c framework.RoutineController){
 	log.Println("<user> started")
-	for !manager.IsStopping(){
+	for !c.IsStopping(){
 		select {
-		case <- manager.GetNotifyChannel():
-			manager.SetStopping()
+		case <- c.GetNotifyChannel():
+			c.SetStopping()
 		case cmd := <-manager.commands:
 			manager.handleCommand(cmd)
 		}
 	}
-	manager.NotifyExit()
+	c.NotifyExit()
 	log.Println("<user> stopped")
 }
 

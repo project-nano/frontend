@@ -22,9 +22,10 @@ type MainService struct {
 }
 
 const (
-	ExecuteName     = "frontend"
-	ConfigFileName  = "frontend.cfg"
-	ConfigPathName  = "config"
+	ExecuteName      = "frontend"
+	ConfigFileName   = "frontend.cfg"
+	ConfigPathName   = "config"
+	ResourcePathName = "resource"
 )
 
 func (service *MainService)Start() (output string, err error){
@@ -101,8 +102,9 @@ func generateConfigure(workingPath string) (err error){
 
 func createDaemon(workingPath string) (service framework.DaemonizedService, err error){
 	var configPath = filepath.Join(workingPath, ConfigPathName)
+	var resourcePath = filepath.Join(workingPath, ResourcePathName)
 	var s = MainService{}
-	s.frontend, err = CreateFrontEnd(configPath)
+	s.frontend, err = CreateFrontEnd(configPath, resourcePath)
 	return &s, err
 }
 

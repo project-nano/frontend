@@ -46,7 +46,7 @@ type SessionResult struct {
 type SessionManager struct {
 	sessions map[string]LoggedSession
 	commands chan sessionCMD
-	framework.SimpleRunner
+	runner   *framework.SimpleRunner
 }
 
 const (
@@ -57,27 +57,35 @@ func CreateSessionManager() (manager *SessionManager, err error) {
 	manager = &SessionManager{}
 	manager.sessions = map[string]LoggedSession{}
 	manager.commands = make(chan sessionCMD, 1<<10)
-	manager.Initial(manager)
+	manager.runner = framework.CreateSimpleRunner(manager.Routine)
 	return
 }
 
-func (manager *SessionManager) Routine() {
+func (manager *SessionManager) Start() error{
+	return manager.runner.Start()
+}
+
+func (manager *SessionManager) Stop() error{
+	return manager.runner.Stop()
+}
+
+func (manager *SessionManager) Routine(c framework.RoutineController) {
 	const (
 		TimerInterval = 10 * time.Second
 	)
 	log.Println("<session> started")
 	var ticker = time.NewTicker(TimerInterval)
-	for !manager.IsStopping() {
+	for !c.IsStopping() {
 		select {
-		case <-manager.GetNotifyChannel():
-			manager.SetStopping()
+		case <-c.GetNotifyChannel():
+			c.SetStopping()
 		case cmd := <-manager.commands:
 			manager.handleCommand(cmd)
 		case <-ticker.C:
 			manager.checkTimeout()
 		}
 	}
-	manager.NotifyExit()
+	c.NotifyExit()
 	log.Println("<session> stopped")
 }
 

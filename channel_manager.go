@@ -45,7 +45,7 @@ type MonitorChannel struct {
 type ChannelManager struct {
 	channels map[string]MonitorChannel
 	commands chan channelCommand
-	framework.SimpleRunner
+	runner   *framework.SimpleRunner
 }
 
 func CreateChannelManager() (manager *ChannelManager, err error){
@@ -55,7 +55,7 @@ func CreateChannelManager() (manager *ChannelManager, err error){
 	manager = &ChannelManager{}
 	manager.channels = map[string]MonitorChannel{}
 	manager.commands = make(chan channelCommand, DefaultQueueSize)
-	manager.Initial(manager)
+	manager.runner = framework.CreateSimpleRunner(manager.Routine)
 	return
 }
 
@@ -68,25 +68,33 @@ func (manager *ChannelManager)EstablishChannel(channel string, respChan chan Cha
 	manager.commands <- channelCommand{Type:ChannelCommandEstablish, Channel:channel, Result:respChan}
 }
 
-func (manager *ChannelManager)Routine(){
+func (manager *ChannelManager) Start() error{
+	return manager.runner.Start()
+}
+
+func (manager *ChannelManager) Stop() error{
+	return manager.runner.Stop()
+}
+
+func (manager *ChannelManager)Routine(c framework.RoutineController){
 	log.Println("<channel> started")
 	const (
 		CheckInterval = 2*time.Second
 	)
 	var checkTicker = time.NewTicker(CheckInterval)
 
-	for !manager.IsStopping(){
+	for !c.IsStopping(){
 		select {
-		case <- manager.GetNotifyChannel():
+		case <- c.GetNotifyChannel():
 			log.Println("<channel> stopping...")
-			manager.SetStopping()
+			c.SetStopping()
 		case <- checkTicker.C:
 			manager.checkChannels()
 		case cmd := <- manager.commands:
 			manager.handleCommand(cmd)
 		}
 	}
-	manager.NotifyExit()
+	c.NotifyExit()
 	log.Println("<channel> stopped")
 }
 
