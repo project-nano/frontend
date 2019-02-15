@@ -6,11 +6,13 @@
 
 - Check resource path
 
+- Enable batch creating and deleting/modify guest name/modify image info
+
 ### Changed
 
 - Locate resource using ABS path
 
-- Suit new runable implement
+- Adapt to new runnable implement
 
 ## [0.7.1] - 2018-12-11
 

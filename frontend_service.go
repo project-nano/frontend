@@ -189,6 +189,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guest/:id/cores", PUT)
 	redirect(router, "/guest/:id/memory", PUT)
 	redirect(router, "/guest/:id/system/", PUT)
+	redirect(router, "/guest/:id/name/", PUT)//modify guest name
 	redirect(router, "/guest/:id/auth", PUT)
 	redirect(router, "/guest/:id/auth", GET)
 	redirect(router, "/guest/:id/disks/resize/:index", PUT)
@@ -237,12 +238,14 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/media_images/", GET)
 	redirect(router, "/media_images/", POST)
 	redirect(router, "/media_images/:id", DELETE)
+	redirect(router, "/media_images/:id", PUT)//modify media image info
 	redirect(router, "/media_image_files/:id", POST)
 
 	redirect(router, "/disk_image_search/*filepath", GET)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/", POST)
 	redirect(router, "/disk_images/:id", DELETE)
+	redirect(router, "/disk_images/:id", PUT) //modify disk image info
 	redirect(router, "/disk_image_files/:id", GET)
 	redirect(router, "/disk_image_files/:id", POST)
 
@@ -254,6 +257,12 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/instances/:id/snapshots/", PUT)
 	redirect(router, "/instances/:id/snapshots/:name", GET)
 	redirect(router, "/instances/:id/snapshots/:name", DELETE)
+
+	//batch
+	redirect(router, "/batch/create_guest/", POST)//start batch creating
+	redirect(router, "/batch/create_guest/:id", GET)//query batch creating
+	redirect(router, "/batch/delete_guest/", POST)//start batch deleting
+	redirect(router, "/batch/delete_guest/:id", GET)//query batch deleting
 
 	//migrations
 	redirect(router, "/migrations/", GET)

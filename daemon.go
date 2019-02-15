@@ -103,6 +103,15 @@ func generateConfigure(workingPath string) (err error){
 func createDaemon(workingPath string) (service framework.DaemonizedService, err error){
 	var configPath = filepath.Join(workingPath, ConfigPathName)
 	var resourcePath = filepath.Join(workingPath, ResourcePathName)
+	if _, err = os.Stat(configPath); os.IsNotExist(err){
+		err = fmt.Errorf("config path %s not available", configPath)
+		return nil, err
+	}
+	if _, err = os.Stat(resourcePath); os.IsNotExist(err){
+		err = fmt.Errorf("resource path %s not available", resourcePath)
+		return nil, err
+	}
+
 	var s = MainService{}
 	s.frontend, err = CreateFrontEnd(configPath, resourcePath)
 	return &s, err
