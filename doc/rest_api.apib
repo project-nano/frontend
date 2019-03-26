@@ -989,34 +989,6 @@ delete guest, release all resource back to pool
         "force": true
     }
 
-### Modify Guest Config [PUT /guests/{id}]
-
-modify some config
-
-+ Request create guest (application/json)
-
-  + Attributes
-    + name (string) - display name
-    + cpu_cores (number) - vm cpu cores
-    + memory (number) - vm memory
-    + auto_start (boolean) - vm auto_start
-    + network_address (string, optional) - optional specified ip address
-    + ether_address (string, optional) - optional specified mac address
-    + ports (string[number], optional) - nat ports
-    + cpu_priority (enum[number], optional) - 0~2, high ~ low
-    + max_io (number, optional) - max iops
-    + inbound (number, optional) - max inbound bandwidth
-    + outbound (number, optional) - max outbound bandwidth
-
-  + Body
-
-    {
-      "name": "some_instance",
-      "cpu_cores": 8,
-      "memory": 4048,
-      "auto_start": true,
-    }
-
 ## Guest Cores [/guest/{id}/cores]
 
 ### Modify Cores [PUT]
@@ -1150,6 +1122,23 @@ modify some config
       }
     }
   ]
+
+## Guest Name [/guest/{id}/name/]
+
+### Modify Guest Name [PUT]
+
+modify guest name
+
++ Request Modify Name (application/json)
+
+  + Attributes
+    + name (string) - display name
+
+  + Body
+
+    {
+      "name": "some_instance",
+    }
 
 ## Instances [/instances/{id}]
 
@@ -1455,6 +1444,27 @@ create channel for monitor and control instance. Create a new temporary channel 
     }
   ]
 
+### Modify Media Image [PUT]
+
++ Request Modify Media Image (application/json)
+
+  + Attributes
+
+    + name (string, optional) - image name
+    + owner (string, optional) - image creater
+    + group (string, optional) - image group
+    + description (string, optional) - image description
+    + tags (array[string], optional) - image tags
+
+  + Body
+
+    {
+      "name": "centos7_64_minimal",
+      "owner": "admin",
+      "group": "manager",
+      "description": "some desc",
+      "tags": ["linux", "64bit", "centos"]
+    }
 
 ### Detele Media Image [DELETE]
 
@@ -1598,12 +1608,13 @@ create channel for monitor and control instance. Create a new temporary channel 
 
 ### Modify Disk Image [PUT]
 
-+ Request Modify Image (application/json)
++ Request Modify Disk Image (application/json)
 
   + Attributes
 
-    + name (string) - image name
-    + group (string) - image group
+    + name (string, optional) - image name
+    + owner (string, optional) - image creater
+    + group (string, optional) - image group
     + description (string, optional) - image description
     + tags (array[string], optional) - image tags
 
@@ -1611,7 +1622,8 @@ create channel for monitor and control instance. Create a new temporary channel 
 
     {
       "name": "centos7_64_minimal",
-      "group": "system",
+      "owner": "admin",
+      "group": "manager",
       "description": "some desc",
       "tags": ["linux", "64bit", "centos"]
     }
@@ -1708,6 +1720,218 @@ create channel for monitor and control instance. Create a new temporary channel 
             "id": "1234567890-abcdef",
             "finished": true
         }
+      ]
+    }
+  ]
+
+## Batch Creating Guest [/batch/create_guest/{id}]
+
++ Parameters
+  + id (string, optional) - id of batch task
+
+### Start Creation [POST]
+
++ Request Start Batch Creating (application/json)
+
+  + Attributes
+    + name_rule: 'order' (enum[string]) - rule of generating guest name
+      + Members
+        + 'order' - incremental digital by order, etc 'xxx_0', 'xxx_1'
+        + 'MAC' - by guest MAC address
+        + 'address' - by assigned guest address
+    + name_prefix (string, optional) - guest name prefix
+    + owner (string) - user id
+    + group (string) - user group
+    + pool (string) - compute pool name
+    + count (number) - instance count
+    + cores (number) - vm cpu cores
+    + memory (number) - vm memory
+    + disks (array[number]) - [system_disk_size, data_disk_n_size...]
+    + auto_start (boolean) - vm auto_start
+    + from_image (string, optional) - initial disk image id
+    + system_version (string, optional) - os version, 'centos7', 'win2012'
+    + modules (array[string], optional) - installed guest module, "qemu"/"cloud-init"
+    + cloud_init (object, optional) - ci params
+      - root_enabled (boolean, optional) - allow root user login via SSH, enable in default
+      - admin_name (string, optional) - specify admin name, using 'root' when omitted
+      - admin_secret (string, optional) - password in plain text, nano generate a new one when omitted
+      - data_path (string, optional) - data disk mount path, '/opt/data' in default
+
+  + Body
+
+    {
+      "name_rule": "order",
+      "name_prefix": "test",
+      "owner": "admin",
+      "group": "manager",
+      "pool": "pool_1",
+      "count": 3,
+      "cores": 8,
+      "memory": 4048,
+      "disks": [4048, 38443],
+      "auto_start": true,
+      "system": "linux",
+      "system_version": "centos7",
+      "modules": ["qemu", "cloud-init"],
+      "cloud_init":{
+        "root_enabled": true,
+        "admin_name": "nano",
+        "admin_secret": "12345678",
+        "data_path": "/opt/data"
+      }
+    }
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "id": "dsfds8979847r3dsf-3r67",
+      }
+    }
+  ]
+
+### Query Batch Status [GET]
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "test_1",
+          "id": "0123456789-abcdef-1",
+          "progress": 45,
+          "status": "creating"
+        },
+        {
+          "name": "test_2",
+          "id": "0123456789-abcdef-2",
+          "status": "fail"
+          "error": "not enough space"
+        },
+        {
+          "name": "test_3",
+          "id": "0123456789-abcdef-3",
+          "status": "created"
+        }
+      ]
+    }
+  ]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "test_1",
+          "id": "0123456789-abcdef-1",
+          "status": "created"
+        },
+        {
+          "name": "test_2",
+          "id": "0123456789-abcdef-2",
+          "status": "fail",
+          "error": "not enough space"
+        },
+        {
+          "name": "test_3",
+          "id": "0123456789-abcdef-3",
+          "status": "created"
+        }
+      ]
+    }
+  ]
+
+## Batch Deleting Guest [/batch/delete_guest/{id}]
+
++ Parameters
+  + id (string, optional) - id of batch task
+
+### Start Batch Deleting [POST]
+
++ Request Start Batch Deleting (application/json)
+
+  + Attributes
+    + guest (array[string]) - list of target guest UUID
+    + force (boolean, optional) - stop running instance for deleting
+
+  + Body
+
+    {
+      "guest": [
+        "0123456789-abcdef-1",
+        "0123456789-abcdef-2",
+        "0123456789-abcdef-3"
+      ],
+      "force": false
+    }
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "id": "dsfds8979847r3dsf-3r67",
+      }
+    }
+  ]
+
+### Query Batch Status [GET]
+
++ Response 202 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "id": "0123456789-abcdef-1",
+          "status": "deleted"
+        },
+        {
+          "id": "0123456789-abcdef-2",
+          "status": "fail",
+          "error": "invalid guest"
+        },
+        {
+          "id": "0123456789-abcdef-3",
+          "status": "deleting"
+        }
+      ]
+    }
+  ]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+      {
+        "id": "0123456789-abcdef-1",
+        "status": "deleted"
+      },
+      {
+        "id": "0123456789-abcdef-2",
+        "status": "fail",
+        "error": "invalid guest"
+      },
+      {
+        "id": "0123456789-abcdef-3",
+        "status": "deleted"
+      }
       ]
     }
   ]

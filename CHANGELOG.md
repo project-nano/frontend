@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.1] - 2019-02-14
+## [0.8.1] - 2019-03-21
 
 ### Added
 
@@ -8,11 +8,23 @@
 
 - Enable batch creating and deleting/modify guest name/modify image info
 
+- Batch creating/deleting guest
+
+- Modify user password
+
+- Modify guest name
+
 ### Changed
 
 - Locate resource using ABS path
 
 - Adapt to new runnable implement
+
+- Verify guest name before submit creating request
+
+- Navigation menu change to the sidebar
+
+- Update chartjs to v2.8
 
 ## [0.7.1] - 2018-12-11
 
