@@ -1,5 +1,23 @@
 # Change Log
 
+## [0.8.2] - 2019-04-4
+
+### Fixed
+
+- Prompt an invalid dialog when removing ranges from an address pool
+
+- Logout when deleting address pool/computing pool/storage pool
+
+- Prompt an invalid dialog when removing a cell from computing pool
+
+- Logout when deleting a media/disk image
+
+- Logout when modify user/password
+
+- Logout when deleting user
+
+- Logout when removing role/group/group member
+
 ## [0.8.1] - 2019-03-21
 
 ### Added
