@@ -27,6 +27,7 @@ type FrontEndService struct {
 	channelManager  *ChannelManager
 	sessionManager  *SessionManager
 	userManager     *UserManager
+	logManager      *LogManager
 	userInitialed   bool
 	fileHandler     http.Handler
 	runner          *framework.SimpleRunner
@@ -37,7 +38,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion = "0.8.2"
+	CurrentVersion = "0.9.1"
 )
 
 
@@ -45,7 +46,7 @@ func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	proxy.service.handleFileRequest(w, r)
 }
 
-func CreateFrontEnd(configPath, resoucePath string) (service *FrontEndService, err error ) {
+func CreateFrontEnd(configPath, resourcePath string) (service *FrontEndService, err error ) {
 	var configFile = filepath.Join(configPath, ConfigFileName)
 	data, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -80,8 +81,8 @@ func CreateFrontEnd(configPath, resoucePath string) (service *FrontEndService, e
 		CSSPath = "css"
 		JSPath = "js"
 	)
-	router.ServeFiles("/css/*filepath", http.Dir(filepath.Join(resoucePath, CSSPath)))
-	router.ServeFiles("/js/*filepath", http.Dir(filepath.Join(resoucePath, JSPath)))
+	router.ServeFiles("/css/*filepath", http.Dir(filepath.Join(resourcePath, CSSPath)))
+	router.ServeFiles("/js/*filepath", http.Dir(filepath.Join(resourcePath, JSPath)))
 
 	router.NotFound = &Proxy{service}
 
@@ -96,8 +97,11 @@ func CreateFrontEnd(configPath, resoucePath string) (service *FrontEndService, e
 	if err != nil{
 		return
 	}
+	if service.logManager, err = CreateLogManager(resourcePath); err != nil{
+		return
+	}
 	service.userInitialed = service.userManager.IsUserAvailable()
-	service.fileHandler = http.FileServer(http.Dir(resoucePath))
+	service.fileHandler = http.FileServer(http.Dir(resourcePath))
 	return
 }
 
@@ -126,6 +130,7 @@ func (service *FrontEndService) Routine(c framework.RoutineController){
 	service.channelManager.Start()
 	service.userManager.Start()
 	service.sessionManager.Start()
+	
 	for !c.IsStopping(){
 		select {
 		case <- c.GetNotifyChannel():
@@ -237,6 +242,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	redirect(router, "/media_images/", GET)
 	redirect(router, "/media_images/", POST)
+	redirect(router, "/media_images/:id", GET)
 	redirect(router, "/media_images/:id", DELETE)
 	redirect(router, "/media_images/:id", PUT)//modify media image info
 	redirect(router, "/media_image_files/:id", POST)
@@ -244,6 +250,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/disk_image_search/*filepath", GET)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/", POST)
+	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
 	redirect(router, "/disk_images/:id", PUT) //modify disk image info
 	redirect(router, "/disk_image_files/:id", GET)
@@ -306,14 +313,15 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.POST("/sessions/", service.createSession)
 	router.PUT("/sessions/:session", service.updateSession)
 
-	////logs
-	//router.GET("/logs/", service.queryLogs)
-	//router.POST("/logs/", service.addLog)
+	//logs
+	router.GET("/logs/", service.queryLogs)
+	router.POST("/logs/", service.addLog)
+	router.DELETE("/logs/", service.removeLog)
 }
 
 func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	const(
-		DefaultURL = "/dashboard.html"
+		DefaultURL = "/login.html"
 	)
 	http.Redirect(w, r, DefaultURL, http.StatusMovedPermanently)
 }
@@ -835,7 +843,7 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 	{
 		//allocate
 		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.AllocateSession(user.Name, requestData.Nonce, user.Menu, respChan)
+		service.sessionManager.AllocateSession(user.Name, user.Group, requestData.Nonce, user.Menu, respChan)
 		var result = <- respChan
 		if result.Error != nil{
 			ResponseFail(DefaultServerError, result.Error.Error(), w)
@@ -843,10 +851,12 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 		}
 		type RespSession struct {
 			Session string   `json:"session"`
+			Group   string   `json:"group"`
 			Timeout int      `json:"timeout"`
 			Menu    []string `json:"menu"`
 		}
-		var payload = RespSession{result.Session.ID, result.Session.Timeout, result.Session.Menu}
+		var session = result.Session
+		var payload = RespSession{session.ID, session.Group, session.Timeout, session.Menu}
 		ResponseOK(payload, w)
 	}
 }
@@ -866,8 +876,60 @@ func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Req
 //logs
 func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 
+	type RequestData struct {
+		Limit  uint   `json:"limit"`
+		Start  uint   `json:"start,omitempty"`
+		After  string `json:"after,omitempty"`
+		Before string `json:"before,omitempty"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 }
 
 func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	type RequestData struct {
+		Format  string `json:"format,omitempty"`
+		Content string `json:"content"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.logManager.AddLog(requestData.Content, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
+}
 
+func (service *FrontEndService) removeLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	type RequestData struct {
+		Entries []string `json:"entries"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var respChan = make(chan error, 1)
+	service.logManager.RemoveLog(requestData.Entries, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK("", w)
 }

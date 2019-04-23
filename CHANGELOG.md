@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.9.1] - 2019-04-23
+
+### Added
+
+- Get media image
+
+### Changed
+
+- Default landing page change to 'login.html'
+
+- Add group info in session
+
 ## [0.8.2] - 2019-04-4
 
 ### Fixed

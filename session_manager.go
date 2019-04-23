@@ -11,6 +11,7 @@ import (
 type LoggedSession struct {
 	ID      string
 	User    string
+	Group   string
 	Menu    []string
 	Nonce   string
 	Key     string
@@ -30,6 +31,7 @@ const (
 type sessionCMD struct {
 	Type       sessionCommandType
 	User       string
+	Group      string
 	Nonce      string
 	Menu       []string
 	Session    string
@@ -89,8 +91,8 @@ func (manager *SessionManager) Routine(c framework.RoutineController) {
 	log.Println("<session> stopped")
 }
 
-func (manager *SessionManager) AllocateSession(user, nonce string, menu []string, resp chan SessionResult) {
-	manager.commands <- sessionCMD{Type: cmdAllocateSession, User: user, Nonce: nonce, Menu: menu, ResultChan: resp}
+func (manager *SessionManager) AllocateSession(user, group, nonce string, menu []string, resp chan SessionResult) {
+	manager.commands <- sessionCMD{Type: cmdAllocateSession, User: user, Group:group, Nonce: nonce, Menu: menu, ResultChan: resp}
 }
 
 func (manager *SessionManager) UpdateSession(session string, resp chan error) {
@@ -109,7 +111,7 @@ func (manager *SessionManager) handleCommand(cmd sessionCMD) {
 	var err error
 	switch cmd.Type {
 	case cmdAllocateSession:
-		err = manager.handleAllocateSession(cmd.User, cmd.Nonce, cmd.Menu, cmd.ResultChan)
+		err = manager.handleAllocateSession(cmd.User, cmd.Group, cmd.Nonce, cmd.Menu, cmd.ResultChan)
 	case cmdGetSession:
 		err = manager.handleGetSession(cmd.Session, cmd.ResultChan)
 	case cmdUpdateSession:
@@ -125,7 +127,7 @@ func (manager *SessionManager) handleCommand(cmd sessionCMD) {
 	}
 }
 
-func (manager *SessionManager) handleAllocateSession(user, nonce string, menu []string, resp chan SessionResult) (err error) {
+func (manager *SessionManager) handleAllocateSession(user, group, nonce string, menu []string, resp chan SessionResult) (err error) {
 
 	var session = LoggedSession{}
 	UID, err := uuid.NewV4()
@@ -134,13 +136,14 @@ func (manager *SessionManager) handleAllocateSession(user, nonce string, menu []
 	}
 	session.ID = UID.String()
 	session.User = user
+	session.Group = group
 	session.Nonce = nonce
 	session.Menu = menu
 	session.Timeout = int(DefaultSessionTimeout / time.Second)
 	session.Expire = time.Now().Add(DefaultSessionTimeout)
 	manager.sessions[session.ID] = session
 	resp <- SessionResult{Session:session}
-	log.Printf("<session> new session '%s' allocated with user '%s'", session.ID, user)
+	log.Printf("<session> new session '%s' allocated with user '%s.%s'", session.ID, group, user)
 	return nil
 }
 
