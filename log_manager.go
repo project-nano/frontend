@@ -1,11 +1,21 @@
 package main
 
+import "time"
+
 type LogManager struct {
 
 }
 
 type LogQueryCondition struct {
+	Limit uint
+	Start uint
+	After time.Time
+	Before time.Time
+}
 
+type LogEntry struct {
+	ID string `json:"id"`
+	Time
 }
 
 type LogResult struct {

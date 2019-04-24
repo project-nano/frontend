@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"io/ioutil"
 	"sort"
+	"time"
 )
 
 type FrontEndService struct {
@@ -130,7 +131,7 @@ func (service *FrontEndService) Routine(c framework.RoutineController){
 	service.channelManager.Start()
 	service.userManager.Start()
 	service.sessionManager.Start()
-	
+
 	for !c.IsStopping(){
 		select {
 		case <- c.GetNotifyChannel():
@@ -889,6 +890,42 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	const (
+		MaxLimit         = 100
+		DefaultLimit     = 20
+		TimeFormatLayout = "2006-01-02 15:04:05"
+		DefaultDuration  = -24 * time.Hour
+	)
+	var condition LogQueryCondition
+	if requestData.Limit == 0 || requestData.Limit > MaxLimit{
+		condition.Limit = DefaultLimit
+	}else{
+		condition.Limit = requestData.Limit
+	}
+	condition.Start = requestData.Start
+	if "" == requestData.Before{
+		condition.Before = time.Now()
+	}else{
+		condition.Before, err = time.Parse(TimeFormatLayout, requestData.Before)
+		if err != nil{
+			err = fmt.Errorf("invalid before time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.Before)
+			ResponseFail(DefaultServerError, err.Error(), w)
+		}
+	}
+	if "" == requestData.After{
+		//latest 24 hour
+		condition.After = condition.Before.Add(DefaultDuration)
+	}else{
+		condition.After, err = time.Parse(TimeFormatLayout, requestData.After)
+		if err != nil{
+			err = fmt.Errorf("invalid after time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.After)
+			ResponseFail(DefaultServerError, err.Error(), w)
+		}
+	}
+	var respChan = make(chan LogResult, 1)
+	service.logManager.QueryLog(condition, respChan)
+	var result = <- respChan
+	if result
 }
 
 func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
