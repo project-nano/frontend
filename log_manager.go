@@ -1,9 +1,22 @@
 package main
 
-import "time"
+import (
+	"time"
+	"nano/framework"
+	"log"
+)
+
+type logCommandType int
+
+const (
+	cmdQueryLog = iota
+	cmdAddLog
+	cmdRemoveLog
+)
 
 type LogManager struct {
-
+	commands chan logCommand
+	runner   *framework.SimpleRunner
 }
 
 type LogQueryCondition struct {
@@ -14,26 +27,95 @@ type LogQueryCondition struct {
 }
 
 type LogEntry struct {
-	ID string `json:"id"`
-	Time
+	ID      string `json:"id"`
+	Time    string `json:"time"`
+	Content string `json:"content"`
 }
 
 type LogResult struct {
+	Error error
+	Logs  []LogEntry
+}
 
+type logCommand struct {
+	Type       logCommandType
+	Condition  LogQueryCondition
+	Content    string
+	IDList     []string
+	ResultChan chan LogResult
+	ErrorChan  chan error
 }
 
 func CreateLogManager(dataPath string) (manager *LogManager, err error) {
+	const (
+		DefaultQueueLength = 1 << 10
+	)
+	manager = &LogManager{}
+	manager.commands = make(chan logCommand, DefaultQueueLength)
+	manager.runner = framework.CreateSimpleRunner(manager.Routine)
+
 	panic("not implement")
 }
 
-func (manager *LogManager) QueryLog(condition LogQueryCondition, respChan chan LogResult)  {
+func (manager *LogManager) Start() error{
+	return manager.runner.Start()
+}
 
+func (manager *LogManager) Stop() error{
+	return manager.runner.Stop()
+}
+
+func (manager *LogManager) Routine(c framework.RoutineController){
+	log.Println("<log> started")
+	for !c.IsStopping() {
+		select {
+		case <-c.GetNotifyChannel():
+			c.SetStopping()
+		case cmd := <-manager.commands:
+			manager.handleCommand(cmd)
+		}
+	}
+	c.NotifyExit()
+	log.Println("<log> stopped")
+}
+
+func (manager *LogManager) QueryLog(condition LogQueryCondition, respChan chan LogResult)  {
+	manager.commands <- logCommand{Type:cmdQueryLog, Condition:condition, ResultChan:respChan}
 }
 
 func (manager *LogManager) AddLog(content string, respChan chan error)  {
-
+	manager.commands <- logCommand{Type:cmdAddLog, Content:content, ErrorChan:respChan}
 }
 
 func (manager *LogManager) RemoveLog(entries []string, respChan chan error)  {
+	manager.commands <- logCommand{Type:cmdRemoveLog, IDList:entries, ErrorChan:respChan}
+}
 
+func (manager *LogManager) handleCommand(cmd logCommand){
+	var err error
+	switch cmd.Type {
+	case cmdQueryLog:
+		err = manager.handleQueryLog(cmd.Condition, cmd.ResultChan)
+	case cmdAddLog:
+		err = manager.handleAddLog(cmd.Content, cmd.ErrorChan)
+	case cmdRemoveLog:
+		err = manager.handleRemoveLog(cmd.IDList, cmd.ErrorChan)
+	default:
+		log.Printf("<log> unsupport command type %d", cmd.Type)
+	}
+	if err != nil{
+		log.Printf("<log> handle command %d fail: %s", cmd.Type, err.Error())
+	}
+}
+
+func (manager *LogManager) handleQueryLog(condition LogQueryCondition, respChan chan LogResult) (err error) {
+	panic("not implement")
+}
+
+func (manager *LogManager) handleAddLog(content string, respChan chan error) (err error) {
+	panic("not implement")
+}
+
+func (manager *LogManager) handleRemoveLog(entries []string, respChan chan error) (err error) {
+	panic("not implement")
 }

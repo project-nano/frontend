@@ -131,11 +131,13 @@ func (service *FrontEndService) Routine(c framework.RoutineController){
 	service.channelManager.Start()
 	service.userManager.Start()
 	service.sessionManager.Start()
+	service.logManager.Start()
 
 	for !c.IsStopping(){
 		select {
 		case <- c.GetNotifyChannel():
 			log.Println("<frontend> stopping server...")
+			service.logManager.Stop()
 			service.sessionManager.Stop()
 			service.userManager.Stop()
 			service.channelManager.Stop()
@@ -910,6 +912,7 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		if err != nil{
 			err = fmt.Errorf("invalid before time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.Before)
 			ResponseFail(DefaultServerError, err.Error(), w)
+			return
 		}
 	}
 	if "" == requestData.After{
@@ -920,12 +923,18 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		if err != nil{
 			err = fmt.Errorf("invalid after time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.After)
 			ResponseFail(DefaultServerError, err.Error(), w)
+			return
 		}
 	}
 	var respChan = make(chan LogResult, 1)
 	service.logManager.QueryLog(condition, respChan)
 	var result = <- respChan
-	if result
+	if result.Error != nil{
+		err = result.Error
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	ResponseOK(result.Logs, w)
 }
 
 func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
