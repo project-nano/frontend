@@ -14,9 +14,13 @@ const (
 	cmdRemoveLog
 )
 
+const (
+	TimeFormatLayout = "2006-01-02 15:04:05"
+)
+
 type LogManager struct {
-	commands chan logCommand
-	runner   *framework.SimpleRunner
+	commands     chan logCommand
+	runner       *framework.SimpleRunner
 }
 
 type LogQueryCondition struct {
@@ -113,6 +117,7 @@ func (manager *LogManager) handleQueryLog(condition LogQueryCondition, respChan 
 }
 
 func (manager *LogManager) handleAddLog(content string, respChan chan error) (err error) {
+
 	panic("not implement")
 }
 
