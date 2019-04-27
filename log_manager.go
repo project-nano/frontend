@@ -19,8 +19,9 @@ const (
 )
 
 type LogManager struct {
-	commands     chan logCommand
-	runner       *framework.SimpleRunner
+	agent    *LogAgent
+	commands chan logCommand
+	runner   *framework.SimpleRunner
 }
 
 type LogQueryCondition struct {
@@ -113,14 +114,23 @@ func (manager *LogManager) handleCommand(cmd logCommand){
 }
 
 func (manager *LogManager) handleQueryLog(condition LogQueryCondition, respChan chan LogResult) (err error) {
-	panic("not implement")
+	logs, err := manager.agent.Query(condition)
+	if err != nil{
+		respChan <- LogResult{Error:err}
+		return
+	}
+	respChan <- LogResult{Logs:logs}
+	return nil
 }
 
 func (manager *LogManager) handleAddLog(content string, respChan chan error) (err error) {
-
-	panic("not implement")
+	err = manager.agent.Write(content)
+	respChan <- err
+	return
 }
 
 func (manager *LogManager) handleRemoveLog(entries []string, respChan chan error) (err error) {
-	panic("not implement")
+	err = manager.agent.Remove(entries)
+	respChan <- err
+	return
 }
