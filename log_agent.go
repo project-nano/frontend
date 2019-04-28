@@ -45,9 +45,11 @@ func (agent *LogAgent) Write(content string) (err error) {
 		agent.currentTime = entryTimeStamp
 		agent.currentIndex = InitialIndex
 	}
-
-	var entryID = fmt.Sprintf("%s%03d", entryTimeStamp.Format(EntryPrefixFormat), agent.currentIndex)
-	_, err = agent.fileWriter.WriteString(fmt.Sprintf("%s,%d,%s\n", entryID, now.UnixNano(), content))
+	var entry LogEntry
+	entry.ID = fmt.Sprintf("%s%03d", entryTimeStamp.Format(EntryPrefixFormat), agent.currentIndex)
+	entry.Time = now
+	entry.Content = content
+	_, err = agent.fileWriter.WriteString(logToLine(entry))
 	if err != nil{
 		return
 	}
@@ -70,7 +72,7 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 		timeStamp, err := time.Parse(EntryPrefixFormat, entryID[:len(EntryPrefixFormat)])
 		if err != nil{
 			err = fmt.Errorf("invalid entry id prefix '%s'", entryID[:len(EntryPrefixFormat)])
-			return
+			return err
 		}
 		var dayString = timeStamp.Format(DayFormat)
 		if _, exists := targetMap[dayString]; !exists{
@@ -81,14 +83,60 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 	}
 	for dayString, targets := range targetMap{
 		var month = dayString[:MonthPrefixLength]
-		var filePath = filepath.Join(agent.logRoot, month, fmt.Sprintf("%s.log", dayString))
-		if _, err = os.Stat(filePath); os.IsNotExist(err){
-			err = fmt.Errorf("can not find log file '%s'", filePath)
+		var logFilePath = filepath.Join(agent.logRoot, month, fmt.Sprintf("%s.log", dayString))
+		if _, err = os.Stat(logFilePath); os.IsNotExist(err){
+			err = fmt.Errorf("can not find log file '%s'", logFilePath)
 			return
 		}
-	}
 
-	panic("not implement")
+		var logLines []string
+		{
+			//load all entries
+			logFile, err := os.Open(logFilePath)
+			if err != nil{
+				err = fmt.Errorf("open log file fail: %s", err.Error())
+				return err
+			}
+			var logScanner = bufio.NewScanner(logFile)
+			for logScanner.Scan(){
+				var line = logScanner.Text()
+				entry, err := parseLog(line)
+				if err != nil{
+					return err
+				}
+				if _, exists := targets[entry.ID]; exists{
+					delete(targets, entry.ID)
+					log.Printf("<log> entry '%s' removed from '%s'", entry.ID, logFilePath)
+				}else{
+					logLines = append(logLines, line)
+				}
+			}
+			logFile.Close()
+		}
+		//rewrite all lines
+		{
+			logFile, err := os.Create(logFilePath)
+			if err != nil{
+				err = fmt.Errorf("rewrite log file fail: %s", err.Error())
+				return err
+			}
+			var writer = bufio.NewWriter(logFile)
+			for _, line := range logLines{
+				_, err = writer.WriteString(line)
+				if err != nil{
+					return err
+				}
+				if err = writer.WriteByte('\n'); err != nil{
+					return err
+				}
+			}
+			writer.Flush()
+			logFile.Close()
+			log.Printf("<log> %d lines rewrite to '%s'", len(logLines), logFilePath)
+		}
+	}
+	log.Printf("<log> %d entries removed", len(idList))
+	return nil
 }
 
 func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err error) {
@@ -97,4 +145,12 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err 
 
 func (agent *LogAgent) createLogFile(date time.Time) (file *os.File, err error){
 	panic("not implement")
+}
+
+func parseLog(line string) (entry LogEntry, err error) {
+	panic("not implement")
+}
+
+func logToLine(entry LogEntry) (line string){
+	return fmt.Sprintf("%s,%d,%s\n", entry.ID, entry.Time.UnixNano(), entry.Content)
 }

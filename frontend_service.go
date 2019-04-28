@@ -934,6 +934,17 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	type respData struct {
+		ID      string `json:"id"`
+		Time    string `json:"time"`
+		Content string `json:"content"`
+	}
+	var payload []respData
+	for _, entry := range result.Logs{
+		var data = respData{ID:entry.ID, Content:entry.Content}
+		data.Time = entry.Time.Format(TimeFormatLayout)
+		payload = append(payload, data)
+	}
 	ResponseOK(result.Logs, w)
 }
 

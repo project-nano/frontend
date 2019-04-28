@@ -32,9 +32,9 @@ type LogQueryCondition struct {
 }
 
 type LogEntry struct {
-	ID      string `json:"id"`
-	Time    string `json:"time"`
-	Content string `json:"content"`
+	ID      string
+	Time    time.Time
+	Content string
 }
 
 type LogResult struct {
