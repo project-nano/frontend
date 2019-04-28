@@ -25,10 +25,10 @@ type LogManager struct {
 }
 
 type LogQueryCondition struct {
-	Limit uint
-	Start uint
-	After time.Time
-	Before time.Time
+	Limit     int
+	Start     int
+	BeginTime time.Time
+	EndTime   time.Time
 }
 
 type LogEntry struct {
@@ -58,8 +58,11 @@ func CreateLogManager(dataPath string) (manager *LogManager, err error) {
 	manager = &LogManager{}
 	manager.commands = make(chan logCommand, DefaultQueueLength)
 	manager.runner = framework.CreateSimpleRunner(manager.Routine)
-
-	panic("not implement")
+	manager.agent, err = CreateLogAgent(dataPath)
+	//if err != nil{
+	//	return
+	//}
+	return
 }
 
 func (manager *LogManager) Start() error{

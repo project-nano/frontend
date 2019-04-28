@@ -880,8 +880,8 @@ func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Req
 func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 
 	type RequestData struct {
-		Limit  uint   `json:"limit"`
-		Start  uint   `json:"start,omitempty"`
+		Limit  int   `json:"limit"`
+		Start  int   `json:"start,omitempty"`
 		After  string `json:"after,omitempty"`
 		Before string `json:"before,omitempty"`
 	}
@@ -906,9 +906,9 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 	}
 	condition.Start = requestData.Start
 	if "" == requestData.Before{
-		condition.Before = time.Now()
+		condition.EndTime = time.Now()
 	}else{
-		condition.Before, err = time.Parse(TimeFormatLayout, requestData.Before)
+		condition.EndTime, err = time.Parse(TimeFormatLayout, requestData.Before)
 		if err != nil{
 			err = fmt.Errorf("invalid before time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.Before)
 			ResponseFail(DefaultServerError, err.Error(), w)
@@ -917,9 +917,9 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 	}
 	if "" == requestData.After{
 		//latest 24 hour
-		condition.After = condition.Before.Add(DefaultDuration)
+		condition.BeginTime = condition.EndTime.Add(DefaultDuration)
 	}else{
-		condition.After, err = time.Parse(TimeFormatLayout, requestData.After)
+		condition.BeginTime, err = time.Parse(TimeFormatLayout, requestData.After)
 		if err != nil{
 			err = fmt.Errorf("invalid after time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.After)
 			ResponseFail(DefaultServerError, err.Error(), w)
