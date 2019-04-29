@@ -898,6 +898,10 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		TimeFormatLayout = "2006-01-02 15:04:05"
 		DefaultDuration  = -24 * time.Hour
 	)
+
+	var now = time.Now()
+	var currentLocation = now.Location()
+
 	var condition LogQueryCondition
 	if requestData.Limit == 0 || requestData.Limit > MaxLimit{
 		condition.Limit = DefaultLimit
@@ -906,9 +910,9 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 	}
 	condition.Start = requestData.Start
 	if "" == requestData.Before{
-		condition.EndTime = time.Now()
+		condition.EndTime = now
 	}else{
-		condition.EndTime, err = time.Parse(TimeFormatLayout, requestData.Before)
+		condition.EndTime, err = time.ParseInLocation(TimeFormatLayout, requestData.Before, currentLocation)
 		if err != nil{
 			err = fmt.Errorf("invalid before time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.Before)
 			ResponseFail(DefaultServerError, err.Error(), w)
@@ -919,7 +923,7 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		//latest 24 hour
 		condition.BeginTime = condition.EndTime.Add(DefaultDuration)
 	}else{
-		condition.BeginTime, err = time.Parse(TimeFormatLayout, requestData.After)
+		condition.BeginTime, err = time.ParseInLocation(TimeFormatLayout, requestData.After, currentLocation)
 		if err != nil{
 			err = fmt.Errorf("invalid after time '%s', must in format 'YYYY-MM-DD HH:MI:SS'", requestData.After)
 			ResponseFail(DefaultServerError, err.Error(), w)

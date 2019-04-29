@@ -42,7 +42,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 		}
 		log.Printf("<log> log root path '%s' created", agent.logRoot)
 	}
-	var today = time.Now().Round(Day)
+	var today = time.Now().Truncate(Day)
 	var monthPath = filepath.Join(agent.logRoot, today.Format(MonthFormat))
 	var logFilePath = filepath.Join(monthPath, fmt.Sprintf("%s.log", today.Format(DateFormat)))
 	if _, err = os.Stat(logFilePath); os.IsNotExist(err){
@@ -53,7 +53,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 			log.Printf("<log> new log path '%s' created", monthPath)
 		}
 		//today is a new day
-		agent.currentTime = time.Now().Round(time.Second)
+		agent.currentTime = time.Now().Truncate(time.Second)
 		agent.currentIndex = InitialEntryIndex
 		agent.currentFile, err = os.Create(logFilePath)
 		if err != nil{
@@ -91,7 +91,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 	}
 
 	if entryAvailable{
-		agent.currentTime = lastEntry.Time.Round(time.Second)
+		agent.currentTime = lastEntry.Time.Truncate(time.Second)
 		agent.currentIndex, err = strconv.Atoi(lastEntry.ID[len(EntryPrefixFormat):])
 		if err != nil{
 			log.Printf("<log> parse index from entry '%s' fail: %s", lastEntry.ID, err.Error())
@@ -100,7 +100,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 		log.Printf("<log> last entry '%s' loaded from '%s'", lastEntry.ID, logFilePath)
 
 	}else{
-		agent.currentTime = time.Now().Round(time.Second)
+		agent.currentTime = time.Now().Truncate(time.Second)
 		agent.currentIndex = InitialEntryIndex
 		log.Printf("<log> debug: initial to %s.%d", agent.currentTime.Format(TimeFormatLayout), agent.currentIndex)
 	}
@@ -112,13 +112,13 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 
 func (agent *LogAgent) Write(content string) (err error) {
 	var now = time.Now()
-	var entryTimeStamp = now.Round(time.Second)
+	var entryTimeStamp = now.Truncate(time.Second)
 	var entry LogEntry
 	if entryTimeStamp.Equal(agent.currentTime) {
 		entry.ID = fmt.Sprintf("%s%03d", entryTimeStamp.Format(EntryPrefixFormat), agent.currentIndex)
 		agent.currentIndex++
 	}else{
-		if !now.Round(24*time.Hour).Equal(agent.currentTime.Round(24*time.Hour)){
+		if !now.Truncate(24*time.Hour).Equal(agent.currentTime.Truncate(24*time.Hour)){
 			//open new file for a new day
 			if err = agent.currentFile.Close();err != nil{
 				return
@@ -149,13 +149,14 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 		IndexLength       = 3
 		MonthPrefixLength = 6
 	)
+	var currentLocation = time.Now().Location()
 	var targetMap = map[string]map[string]bool{}
 	for _, entryID := range idList{
 		if len(entryID) != (len(EntryPrefixFormat) + IndexLength){
 			err = fmt.Errorf("invalid entry id '%s' with length %d", entryID, len(entryID))
 			return
 		}
-		timeStamp, err := time.Parse(EntryPrefixFormat, entryID[:len(EntryPrefixFormat)])
+		timeStamp, err := time.ParseInLocation(EntryPrefixFormat, entryID[:len(EntryPrefixFormat)], currentLocation)
 		if err != nil{
 			err = fmt.Errorf("invalid entry id prefix '%s'", entryID[:len(EntryPrefixFormat)])
 			return err
