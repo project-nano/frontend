@@ -47,7 +47,7 @@ func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request){
 	proxy.service.handleFileRequest(w, r)
 }
 
-func CreateFrontEnd(configPath, resourcePath string) (service *FrontEndService, err error ) {
+func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEndService, err error ) {
 	var configFile = filepath.Join(configPath, ConfigFileName)
 	data, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -98,7 +98,7 @@ func CreateFrontEnd(configPath, resourcePath string) (service *FrontEndService, 
 	if err != nil{
 		return
 	}
-	if service.logManager, err = CreateLogManager(resourcePath); err != nil{
+	if service.logManager, err = CreateLogManager(dataPath); err != nil{
 		return
 	}
 	service.userInitialed = service.userManager.IsUserAvailable()
@@ -197,6 +197,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guest/:id/cores", PUT)
 	redirect(router, "/guest/:id/memory", PUT)
 	redirect(router, "/guest/:id/system/", PUT)
+
 	redirect(router, "/guest/:id/name/", PUT)//modify guest name
 	redirect(router, "/guest/:id/auth", PUT)
 	redirect(router, "/guest/:id/auth", GET)
@@ -251,7 +252,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/media_image_files/:id", POST)
 
 	redirect(router, "/disk_image_search/*filepath", GET)
-	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/", POST)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
@@ -939,13 +939,13 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		Time    string `json:"time"`
 		Content string `json:"content"`
 	}
-	var payload []respData
+	var payload = make([]respData, 0)
 	for _, entry := range result.Logs{
 		var data = respData{ID:entry.ID, Content:entry.Content}
 		data.Time = entry.Time.Format(TimeFormatLayout)
 		payload = append(payload, data)
 	}
-	ResponseOK(result.Logs, w)
+	ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){

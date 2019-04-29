@@ -26,6 +26,7 @@ const (
 	ConfigFileName   = "frontend.cfg"
 	ConfigPathName   = "config"
 	ResourcePathName = "resource"
+	DataPathName     = "data"
 )
 
 func (service *MainService)Start() (output string, err error){
@@ -97,12 +98,23 @@ func generateConfigure(workingPath string) (err error){
 		}
 		fmt.Printf("default configure '%s' generated\n", configFile)
 	}
+
+	var dataPath = filepath.Join(workingPath, DataPathName)
+	if _, err = os.Stat(dataPath); os.IsNotExist(err) {
+		//create path
+		err = os.Mkdir(dataPath, DefaultPathPerm)
+		if err != nil {
+			return
+		}
+		fmt.Printf("data path %s created\n", dataPath)
+	}
 	return
 }
 
 func createDaemon(workingPath string) (service framework.DaemonizedService, err error){
 	var configPath = filepath.Join(workingPath, ConfigPathName)
 	var resourcePath = filepath.Join(workingPath, ResourcePathName)
+	var dataPath = filepath.Join(workingPath, DataPathName)
 	if _, err = os.Stat(configPath); os.IsNotExist(err){
 		err = fmt.Errorf("config path %s not available", configPath)
 		return nil, err
@@ -111,9 +123,13 @@ func createDaemon(workingPath string) (service framework.DaemonizedService, err 
 		err = fmt.Errorf("resource path %s not available", resourcePath)
 		return nil, err
 	}
+	if _, err = os.Stat(dataPath); os.IsNotExist(err){
+		err = fmt.Errorf("data path %s not available", dataPath)
+		return nil, err
+	}
 
 	var s = MainService{}
-	s.frontend, err = CreateFrontEnd(configPath, resourcePath)
+	s.frontend, err = CreateFrontEnd(configPath, resourcePath, dataPath)
 	return &s, err
 }
 
