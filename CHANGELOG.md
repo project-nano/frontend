@@ -1,10 +1,12 @@
 # Change Log
 
-## [0.9.1] - 2019-04-23
+## [0.9.1] - 2019-04-30
 
 ### Added
 
 - Get media image
+
+- Query/Add/Remove operate log
 
 ### Changed
 
