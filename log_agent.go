@@ -12,11 +12,12 @@ import (
 )
 
 type LogAgent struct {
-	currentTime  time.Time
-	currentIndex int
-	currentFile  *os.File
-	fileWriter   *bufio.Writer
-	logRoot      string
+	currentTime    time.Time
+	currentIndex   int
+	currentFile    *os.File
+	currentLogPath string
+	fileWriter     *bufio.Writer
+	logRoot        string
 }
 
 const (
@@ -26,13 +27,13 @@ const (
 	DateFormat         = "20060102"
 	ValidEntryIDLength = len(EntryPrefixFormat) + 3
 	InitialEntryIndex  = 1
+	OpenFilePerm       = 0640
 )
 
 func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 	const (
 		logPathName     = "log"
 		DefaultPathPerm = 0740
-		OpenFilePerm    = 0640
 	)
 	agent = &LogAgent{}
 	agent.logRoot = filepath.Join(dataPath, logPathName)
@@ -44,8 +45,8 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 	}
 	var today = time.Now().Truncate(Day)
 	var monthPath = filepath.Join(agent.logRoot, today.Format(MonthFormat))
-	var logFilePath = filepath.Join(monthPath, fmt.Sprintf("%s.log", today.Format(DateFormat)))
-	if _, err = os.Stat(logFilePath); os.IsNotExist(err){
+	agent.currentLogPath = filepath.Join(monthPath, fmt.Sprintf("%s.log", today.Format(DateFormat)))
+	if _, err = os.Stat(agent.currentLogPath); os.IsNotExist(err){
 		if _, err = os.Stat(monthPath); os.IsNotExist(err){
 			if err = os.Mkdir(monthPath, DefaultPathPerm); err != nil{
 				return
@@ -55,12 +56,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 		//today is a new day
 		agent.currentTime = time.Now().Truncate(time.Second)
 		agent.currentIndex = InitialEntryIndex
-		agent.currentFile, err = os.Create(logFilePath)
-		if err != nil{
-			return
-		}
-		agent.fileWriter = bufio.NewWriter(agent.currentFile)
-		log.Printf("<log> new log file '%s' created", logFilePath)
+		err = agent.openCurrentLog()
 		return
 	}
 
@@ -70,7 +66,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 
 	{
 		var scanSource *os.File
-		scanSource, err = os.Open(logFilePath)
+		scanSource, err = os.Open(agent.currentLogPath)
 		if err != nil{
 			return
 		}
@@ -85,10 +81,6 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 			}
 		}
 	}
-	agent.currentFile, err = os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND, OpenFilePerm)
-	if err != nil{
-		return
-	}
 
 	if entryAvailable{
 		agent.currentTime = lastEntry.Time.Truncate(time.Second)
@@ -97,16 +89,14 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 			log.Printf("<log> parse index from entry '%s' fail: %s", lastEntry.ID, err.Error())
 			return
 		}
-		log.Printf("<log> last entry '%s' loaded from '%s'", lastEntry.ID, logFilePath)
+		log.Printf("<log> last entry '%s' loaded from '%s'", lastEntry.ID, agent.currentLogPath)
 
 	}else{
 		agent.currentTime = time.Now().Truncate(time.Second)
 		agent.currentIndex = InitialEntryIndex
 		log.Printf("<log> debug: initial to %s.%d", agent.currentTime.Format(TimeFormatLayout), agent.currentIndex)
 	}
-
-	agent.fileWriter = bufio.NewWriter(agent.currentFile)
-
+	err = agent.openCurrentLog()
 	return
 }
 
@@ -120,14 +110,13 @@ func (agent *LogAgent) Write(content string) (err error) {
 	}else{
 		if !now.Truncate(24*time.Hour).Equal(agent.currentTime.Truncate(24*time.Hour)){
 			//open new file for a new day
-			if err = agent.currentFile.Close();err != nil{
+			if err = agent.closeCurrentLog();err != nil{
 				return
 			}
-			if agent.currentFile, err = agent.createLogFile(now); err != nil{
+			agent.currentLogPath = filepath.Join(agent.logRoot, now.Format(MonthFormat), fmt.Sprintf("%s.log", now.Format(DateFormat)))
+			if err = agent.openCurrentLog(); err != nil{
 				return
 			}
-			agent.fileWriter = bufio.NewWriter(agent.currentFile)
-			log.Printf("<log> new log writer opened for %s", now.Format("2006-01-02"))
 		}
 		//reset mark to second.1
 		agent.currentTime = entryTimeStamp
@@ -202,7 +191,8 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 		}
 		//rewrite all lines
 		{
-			logFile, err := os.Create(logFilePath)
+			logFile, err := os.OpenFile(agent.currentLogPath, os.O_WRONLY|os.O_APPEND|os.O_TRUNC, OpenFilePerm)
+			//logFile, err := os.Create(logFilePath)
 			if err != nil{
 				err = fmt.Errorf("rewrite log file fail: %s", err.Error())
 				return err
@@ -227,10 +217,7 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 }
 
 func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err error) {
-	log.Printf("<log> debug: query limit %d, offset %d, begin %s/%d, end %s/%d",
-		condition.Limit, condition.Start,
-		condition.BeginTime.Format(TimeFormatLayout), condition.BeginTime.UnixNano(),
-		condition.EndTime.Format(TimeFormatLayout), condition.EndTime.UnixNano())
+
 	if condition.EndTime.Sub(condition.BeginTime) < 0{
 		err = fmt.Errorf("invalid time range (%s ~ %s)", condition.BeginTime.Format(TimeFormatLayout), condition.EndTime.Format(TimeFormatLayout))
 		return
@@ -244,7 +231,6 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err 
 			log.Printf("<log> warning: query ignores absent log '%s'", logFilePath)
 			continue
 		}
-		log.Printf("<log> debug: check file %s", logFilePath)
 		var logFile *os.File
 		logFile, err = os.Open(logFilePath)
 		if err != nil{
@@ -259,46 +245,75 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err 
 				return
 			}
 			if !inTimeRange {
-				log.Printf("<log> debug: out of range before check entry '%s', entry '%s', begin '%s'",
-					entry.ID, entry.Time.Format(TimeFormatLayout), condition.BeginTime.Format(TimeFormatLayout))
 				if entry.Time.After(condition.BeginTime){
 					//range start
 					inTimeRange = true
-					log.Printf("<log> debug: entry begin time at '%s'", entry.ID)
 				}
 			}
 			if inTimeRange{
 				if offset < condition.Start{
 					//pass current entry
-					log.Printf("<log> debug: pass entry '%s' at offset %d", entry.ID, offset)
+					//log.Printf("<log> debug: pass entry '%s' at offset %d", entry.ID, offset)
 					offset++
 					continue
+				}
+				if entry.Time.After(condition.EndTime){
+					break
 				}
 				//store log
 				logs = append(logs, entry)
 				queried++
-				log.Printf("<log> debug: entry '%s' queried", entry.ID)
+				//log.Printf("<log> debug: entry '%s' queried", entry.ID)
 				//check limit
 				if queried >= condition.Limit{
-					log.Printf("<log> debug: %d entries queried as '%s'", len(logs), logFilePath)
+					//log.Printf("<log> debug: %d entries queried as '%s'", len(logs), logFilePath)
 					break
 				}
 			}
 		}//end scanner
 		if queried >= condition.Limit{
-			log.Printf("<log> debug: %d entries queried at date '%s'", len(logs), date.Format(DateFormat))
+			//log.Printf("<log> debug: %d entries queried at date '%s'", len(logs), date.Format(DateFormat))
 			break
 		}
 	}
-	log.Printf("<log> %d entries queried", len(logs))
+	log.Printf("<log> %d entries queried between (%s ~ %s), start from %d, with limit %d",
+		len(logs),
+		condition.BeginTime.Format(TimeFormatLayout),
+		condition.EndTime.Format(TimeFormatLayout),
+		condition.Start, condition.Limit)
 	return logs, nil
 }
 
-func (agent *LogAgent) createLogFile(date time.Time) (file *os.File, err error){
-	var logFilePath = filepath.Join(agent.logRoot, date.Format(MonthFormat), fmt.Sprintf("%s.log", date.Format(DateFormat)))
-	return os.Create(logFilePath)
+func (agent *LogAgent) openCurrentLog() (err error){
+	if _, err = os.Stat(agent.currentLogPath); os.IsNotExist(err){
+		agent.currentFile, err = os.Create(agent.currentLogPath)
+		if err != nil{
+			return
+		}
+		log.Printf("<log> current log '%s' created", agent.currentLogPath)
+		return nil
+	}else{
+		//open
+		agent.currentFile, err = os.OpenFile(agent.currentLogPath, os.O_WRONLY|os.O_APPEND, OpenFilePerm)
+		if err != nil{
+			return
+		}
+		log.Printf("<log> current log '%s' opened", agent.currentLogPath)
+	}
+	agent.fileWriter = bufio.NewWriter(agent.currentFile)
+	return nil
 }
 
+func (agent *LogAgent) closeCurrentLog() (err error){
+	if err = agent.fileWriter.Flush(); err != nil{
+		return
+	}
+	if err = agent.currentFile.Close(); err != nil{
+		return
+	}
+	agent.currentFile = nil
+	return nil
+}
 func parseLog(line string) (entry LogEntry, err error) {
 	const (
 		separator = ","
