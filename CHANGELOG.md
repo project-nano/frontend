@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.9.1] - 2019-04-30
+## [0.9.1] - 2019-05-06
 
 ### Added
 
@@ -8,11 +8,15 @@
 
 - Query/Add/Remove operate log
 
+- Add version and online manual link to footer
+
 ### Changed
 
 - Default landing page change to 'login.html'
 
 - Add group info in session
+
+- Bind resources to current user/group: Create instance/upload&build images
 
 ## [0.8.2] - 2019-04-4
 
