@@ -802,9 +802,10 @@ func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Reques
 		User    string   `json:"user"`
 		Menu    []string `json:"menu,omitempty"`
 		Timeout int      `json:"timeout"`
+		Group   string   `json:"group"`
 	}
 	var session = result.Session
-	var payload = RespSession{session.User, session.Menu, session.Timeout}
+	var payload = RespSession{session.User, session.Menu, session.Timeout, session.Group}
 	ResponseOK(payload, w)
 }
 

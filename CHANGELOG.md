@@ -1,10 +1,12 @@
 # Change Log
 
-## [0.9.1] - 2019-04-23
+## [0.9.1] - 2019-05-06
 
 ### Added
 
 - Get media image
+
+- Add version and online manual link to footer
 
 ### Changed
 
