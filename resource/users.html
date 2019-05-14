@@ -113,6 +113,7 @@
               ).append($('<td>'))
             )
           );
+          var currentUser = N.GetCurrentUser();
           result['data'].forEach((name) => {
             var content = $('<tr>');
             content.append(
@@ -131,12 +132,15 @@
                   $('<i>').addClass('material-icons').text('lock')
                 )
             );
-            operators.append(
-              $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
-                attr('data-tooltip', texts.get(N.TagDelete)).attr('onclick', 'showDeleteUser("'+ name +'")').append(
-                  $('<i>').addClass('material-icons').text('delete')
-                )
-            );
+            if (name != currentUser){
+              operators.append(
+                $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
+                  attr('data-tooltip', texts.get(N.TagDelete)).attr('onclick', 'showDeleteUser("'+ name +'")').append(
+                    $('<i>').addClass('material-icons').text('delete')
+                  )
+              );
+            }
+
             content.append(operators);
             container.append(
               $('<div>').addClass('col m8 push-m2').append(
@@ -789,6 +793,7 @@
               ).append($('<td>'))
             )
           );
+          var currentGroup = N.GetCurrentGroup();
           result['data'].forEach((group) => {
             var content = $('<tr>');
             var groupName = group['name'];
@@ -815,12 +820,15 @@
                   $('<i>').addClass('material-icons').text('group')
                 )
             );
-            operators.append(
-              $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
-                attr('data-tooltip', texts.get(N.TagDelete)).attr('onclick', 'showRemoveGroup("'+ groupName +'")').append(
-                  $('<i>').addClass('material-icons').text('delete')
-                )
-            );
+            if (groupName != currentGroup){
+              operators.append(
+                $('<a>').attr('href', '#').addClass('blue-grey-text tooltipped').attr('data-position', 'bottom').
+                  attr('data-tooltip', texts.get(N.TagDelete)).attr('onclick', 'showRemoveGroup("'+ groupName +'")').append(
+                    $('<i>').addClass('material-icons').text('delete')
+                  )
+              );      
+            }
+
             content.append(operators);
             container.append(
               $('<div>').addClass('col m8 push-m2').append(

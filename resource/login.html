@@ -92,7 +92,8 @@
             return;
           }
           var menu = data['menu'];
-          N.SaveSession(sessionID, user, menu, parseInt(timeout));
+          var group = data['group'];
+          N.SaveSession(sessionID, user, group, menu, parseInt(timeout));
           //todo: redirect
           var params = parseQueryString();
           var targetURL = '/dashboard.html'

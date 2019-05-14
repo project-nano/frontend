@@ -1372,6 +1372,48 @@ create channel for monitor and control instance. Create a new temporary channel 
 
 # Group Image
 
+
+## Disk Image Search [/media_image_search/]
+
+### Search Media Image [GET]
+
++ Request query media images (application/json)
+
+  + Parameters
+
+    + owner (string, optional) - image owner
+    + group (string, optional) - image group
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":[
+        {
+          "name": "centos7_64_minimal",
+          "id": "sdf83kjfe-23r4wedf",
+          "description": "some desc",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
+          "size": 4872334659735,
+          "tags": ["linux", "64bit", "centos"]
+        },
+        {
+          "name": "win7_home_64",
+          "id": "sdf83kjfe-23r4wertytdf",
+          "description": "win desktop",
+          "create_time": "2018-08-21 00:12:34",
+          "modify_time": "2018-08-21 00:13:34",
+          "size": 4872334659774,
+          "tags": ["windows", "64bit", "windows7"]
+        }
+      ]
+    }
+  ]
+
+
 ## Media Image [/media_images/{id}]
 
 + Parameters
@@ -1405,6 +1447,26 @@ create channel for monitor and control instance. Create a new temporary channel 
           "tags": ["windows", "64bit", "windows7"]
         }
       ]
+    }
+  ]
+
+### Get Media Image [Get /media_images/{id}]
+
++ Response 200 (application/json)
+
+  [
+    {
+      "error_code": 0,
+      "message": "",
+      "data":{
+        "name": "centos7_64_minimal",
+        "id": "sdf83kjfe-23r4wedf",
+        "description": "some desc",
+        "create_time": "2018-08-21 00:12:34",
+        "modify_time": "2018-08-21 00:13:34",
+        "size": 4872334659735,
+        "tags": ["linux", "64bit", "centos"]
+      }
     }
   ]
 
@@ -1484,7 +1546,7 @@ create channel for monitor and control instance. Create a new temporary channel 
 
   + Body
 
-## Disk Image Search [/disk_image_search]
+## Disk Image Search [/disk_image_search/]
 
 ### Search Disk Image [GET]
 
@@ -1492,7 +1554,8 @@ create channel for monitor and control instance. Create a new temporary channel 
 
   + Parameters
 
-    + group (string) - image group
+    + owner (string, optional) - image owner
+    + group (string, optional) - image group
     + tags (array[string], optional) - image tags
 
 + Response 200 (application/json)
@@ -1530,7 +1593,7 @@ create channel for monitor and control instance. Create a new temporary channel 
 
   + id (string, optional) - disk image id
 
-### Query Disk Image [GET /disk_images/{id}]
+### Get Disk Image [GET /disk_images/{id}]
 
 + Response 200 (application/json)
 
@@ -1565,8 +1628,6 @@ create channel for monitor and control instance. Create a new temporary channel 
         }
     }
   ]
-
-
 
 ### Create Disk Image [POST]
 
@@ -2300,7 +2361,8 @@ Manage authenticated session
       "data":{
         "menu": ["dashboard", "compute_pool", "address_pool", "instance"],
         "resource": [],
-        "user": "nano"
+        "user": "nano",
+        "group": "admin"
       }
     }
   ]
@@ -2324,14 +2386,15 @@ Manage authenticated session
       "message": "",
       "data":[
         {
+          "entry": "201812011457390001",
           "time": "2018-12-01 14:57:39",
           "content": "admin create new user example"
         },
         {
+          "entry": "201812031427190001",
           "time": "2018-12-03 14:27:19",
           "content": "nano.sabrina create new guest nano.test1"
         }
-
       ]
     }
   ]
@@ -2349,4 +2412,20 @@ Manage authenticated session
     {
       "format": "string",
       "content": "here is a new log for somebody creating a new instance"
+    }
+
+### Delete Log Entry [DELETE]
+
++ Request Delete Log (application/json)
+
+  + Attributes
+    + entries (array[string]) - list of log entry
+
+  + Body
+
+    {
+      "entries": [
+        "201812011457390001",
+        "201812031427190001"
+      ]
     }

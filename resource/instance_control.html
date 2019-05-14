@@ -70,6 +70,7 @@
 
 <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
 <script type="text/javascript" src="js/materialize.min.js"></script>
+<script type="text/javascript" src="js/nano.js"></script>
 <script type="module">
   import RFB from './js/novnc/core/rfb.js';
 
@@ -244,8 +245,9 @@
   //insert media
   function selectInsertMedia(name, id){
     $('#insert_confirm_link').attr('onclick', 'insertMedia("' + name + '", "' + id +'")');
+    var queryURL = '/media_image_search/?user=' + N.GetCurrentUser() + '&group=' + N.GetCurrentGroup();
     $.getJSON(
-      '/media_images/',
+      queryURL,
       function(result){
         if (0 != result['error_code']) {
             M.toast({html: 'fetch media fail: ' + result['message'], outDuration: 600});

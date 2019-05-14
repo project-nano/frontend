@@ -172,8 +172,8 @@ function createImage(name, description, tags, guest){
   request.name = name;
   request.description = description;
   request.guest = guest;
-  request.owner = "admin";
-  request.group = "manager";
+  request.owner = N.GetCurrentUser();
+  request.group = N.GetCurrentGroup();
   request.tags = tags;
   $.post(
     '/disk_images/',
@@ -302,8 +302,9 @@ function loadPools(){
 }
 
 function loadInstances(poolName){
+  var queryURL = "/guest_search/?pool=" + poolName + '&owner=' + N.GetCurrentUser() + '&group=' + N.GetCurrentGroup();
   $.getJSON(
-    '/guest_search/?pool=' + poolName,
+    queryURL,
     function(result){
       if (0 != result['error_code']) {
           M.toast({html: 'load instances fail:' + result['message']});

@@ -19,7 +19,7 @@
                 <a href="build_image.html" class="waves-effect waves-light blue-grey lighten-2 btn" id="btn-build"><i class="material-icons left">build</i></a>
                 <a href="upload_disk.html" class="waves-effect waves-light blue-grey lighten-2 btn" id="btn-upload"><i class="material-icons left">file_upload</i></a>
             </div>
-            <div class="col m2 push-m4">
+            <!-- <div class="col m2 push-m4">
                 <div class="input-field">
                     <select>
                         <option value="" disabled selected>Filter by Group</option>
@@ -36,7 +36,7 @@
                         <option value="windows">windows</option>
                     </select>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
     <div class="divider"></div>
@@ -68,8 +68,8 @@
 
     M.AutoInit();
 
-    var filterGroup;
-    var filterTag;
+    // var filterGroup;
+    // var filterTag;
     function parseQueryString(){
       var url = window.location.search;
       var queryString = url.substring( url.indexOf('?') + 1 );
@@ -85,12 +85,12 @@
       if (0 == params.length){
         return true;
       }
-      if (params.has('group')){
-        filterGroup = params.get('group');
-      }
-      if (params.has('tags')){
-        filterTag = params.get('tags');
-      }
+      // if (params.has('group')){
+      //   filterGroup = params.get('group');
+      // }
+      // if (params.has('tags')){
+      //   filterTag = params.get('tags');
+      // }
       return true;
     }
 
@@ -107,16 +107,17 @@
     }
 
     function loadImages(){
-      var url = '/disk_image_search/';
-      if (filterGroup && filterTag){
-        url += '?group=' + filterGroup + '&tags=' + filterTag;
-      }else if (filterGroup){
-        url += '?group=' + filterGroup;
-      }else if (filterTag){
-        url += '?tags=' + filterTag;
-      }
+      var queryURL = '/disk_image_search/?user=' + N.GetCurrentUser() + '&group=' + N.GetCurrentGroup();
+      // var url = '/disk_image_search/';
+      // if (filterGroup && filterTag){
+      //   url += '?group=' + filterGroup + '&tags=' + filterTag;
+      // }else if (filterGroup){
+      //   url += '?group=' + filterGroup;
+      // }else if (filterTag){
+      //   url += '?tags=' + filterTag;
+      // }
       $.getJSON(
-        url,
+        queryURL,
         function(result){
           if (0 != result['error_code']) {
             outputMessage(result['message']);

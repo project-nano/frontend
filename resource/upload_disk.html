@@ -173,8 +173,8 @@ function createImage(name, description, tags){
   var request = new Object();
   request.name = name;
   request.description = description;
-  request.owner = "admin";
-  request.group = "manager";
+  request.owner = N.GetCurrentUser();
+  request.group = N.GetCurrentGroup();
   request.tags = tags;
   $.post(
     '/disk_images/',

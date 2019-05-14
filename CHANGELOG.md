@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.9.1] - 2019-05-06
+## [0.9.1] - 2019-05-14
 
 ### Added
 
@@ -13,6 +13,10 @@
 - Default landing page change to 'login.html'
 
 - Add group info in session
+
+- Bind resources to current user/group: Create instance/upload&build images
+
+- Media images filtered using the current user and group
 
 ## [0.8.2] - 2019-04-4
 

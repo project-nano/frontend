@@ -60,8 +60,9 @@
     }
 
     function loadImages(){
+      var queryURL = '/media_image_search/?user=' + N.GetCurrentUser() + '&group=' + N.GetCurrentGroup();
       $.getJSON(
-        '/media_images/',
+        queryURL,
         function(result){
           if (0 != result['error_code']) {
             outputMessage(result['message']);

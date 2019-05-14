@@ -509,10 +509,11 @@ function _logoutSession(){
   window.location.replace(target);
 }
 
-N.SaveSession = function(id, user, menu, timeout){
+N.SaveSession = function(id, user, group, menu, timeout){
   var session = new Object();
   session.id = id;
   session.user = user;
+  session.group = group;
   session.menu = menu;
   session.timeout = timeout;
   localStorage.setItem(N._session_tag, JSON.stringify(session));
@@ -525,6 +526,15 @@ N.GetCurrentUser = function(){
   }
   var session = JSON.parse(sessionString);
   return session.user;
+}
+
+N.GetCurrentGroup = function(){
+  var sessionString = localStorage.getItem(N._session_tag);
+  if (!sessionString || 0 == sessionString.length){
+    return null;
+  }
+  var session = JSON.parse(sessionString);
+  return session.group;
 }
 
 N.ValidateSession = function(){
@@ -794,11 +804,41 @@ N.CreateMenuAndFooter = function(userName, menuList){
   };
   langSwitch.click(onLanguageChanged);
 
-  var footerContainer = $('<div>').addClass('container').text('© 2018 Copyright Project Nano. All rights reserved.');
+  var footerContainer = $('<div>').addClass('container');
   var rightDiv = $('<div>').addClass('row');
+  var langLabel = $('<label>').addClass('white-text').append('English').append(
+    langSwitch).append(
+      $('<span>').addClass('lever')
+    ).append('中文');
+
+  const version = '0.9.1';
+  var rightText = 'Project Nano ' + version + ' ©2018-2019 ';
+
+  var rightContent = $('<div>').addClass('col m6 s12');
+  var manualLink = $('<a>').addClass('white-text').attr('href', 'https://nanocloud.readthedocs.io/projects/guide/zh_CN/latest/').attr('target', '_blank');
+  if (this.IsChinese()){
+    rightContent.append(
+      $('<span>').text(rightText + '版权所有.  ')
+    ).append(
+      manualLink.append(
+        $('<u>').text('在线文档')
+      )
+    )
+  }else{
+    rightContent.append(
+      $('<span>').text(rightText + 'all rights reserved.  ')
+    ).append(
+      manualLink.append(
+        $('<u>').text('Online Manual')
+      )
+    )
+  };
+
+  rightDiv.append(rightContent);
+
   if (userName){
     rightDiv.append(
-      $('<div>').addClass('col m3 push-m7').append(
+      $('<div>').addClass('col m3').append(
         $('<label>').addClass('white-text').text(texts.get(this.TagCurrent) + texts.get(this.TagUser) + ': ' + userName)
       ).append(
         $('<a>').addClass('btn-small btn-flat').click(showChangePasswordModal).append(
@@ -810,16 +850,19 @@ N.CreateMenuAndFooter = function(userName, menuList){
         )
       )
     );
+    rightDiv.append(
+      $('<div>').addClass('switch col m2').append(
+        langLabel
+      )
+    );
+  }else{
+    rightDiv.append(
+      $('<div>').addClass('switch col m3 push-m3').append(
+        langLabel
+      )
+    );
   }
-  rightDiv.append(
-    $('<div>').addClass('switch col m2 push-m8').append(
-      $('<label>').addClass('white-text').append('English').append(
-        langSwitch
-      ).append(
-        $('<span>').addClass('lever')
-      ).append('中文')
-    )
-  );
+
   $('body').append(
     $('<footer>').addClass('page-footer blue-grey darken-3').append(
       $('<div>').addClass('footer-copyright').append(
