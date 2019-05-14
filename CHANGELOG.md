@@ -6,7 +6,11 @@
 
 - Get media image
 
+- Query/Add/Remove operate log
+
 - Add version and online manual link to footer
+
+- Add new API "GET /media_image_search/" for filtering media images by owner and group
 
 ### Changed
 

@@ -244,6 +244,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/storage_pools/:pool", PUT)
 	redirect(router, "/storage_pools/:pool", DELETE)
 
+	redirect(router, "/media_image_search/*filepath", GET)
 	redirect(router, "/media_images/", GET)
 	redirect(router, "/media_images/", POST)
 	redirect(router, "/media_images/:id", GET)

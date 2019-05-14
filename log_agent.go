@@ -164,11 +164,20 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 			err = fmt.Errorf("can not find log file '%s'", logFilePath)
 			return
 		}
+		var isCurrentLog = logFilePath == agent.currentLogPath
 
-		var logLines []string
+		if isCurrentLog{
+			if err = agent.closeCurrentLog();err != nil{
+				log.Printf("<log> close current log for remove fail: %s", err.Error())
+				return
+			}
+		}
+
+		var logLines = make([]string, 0)
 		{
 			//load all entries
-			logFile, err := os.Open(logFilePath)
+			var logFile *os.File
+			logFile, err = os.Open(logFilePath)
 			if err != nil{
 				err = fmt.Errorf("open log file fail: %s", err.Error())
 				return err
@@ -191,8 +200,8 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 		}
 		//rewrite all lines
 		{
-			logFile, err := os.OpenFile(agent.currentLogPath, os.O_WRONLY|os.O_APPEND|os.O_TRUNC, OpenFilePerm)
-			//logFile, err := os.Create(logFilePath)
+			var logFile *os.File
+			logFile, err = os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_TRUNC, OpenFilePerm)
 			if err != nil{
 				err = fmt.Errorf("rewrite log file fail: %s", err.Error())
 				return err
@@ -210,6 +219,14 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 			writer.Flush()
 			logFile.Close()
 			log.Printf("<log> %d lines rewrite to '%s'", len(logLines), logFilePath)
+		}
+		if isCurrentLog{
+			//reopen
+			if err = agent.openCurrentLog(); err != nil{
+				log.Printf("<log> reopen current log fail: %s", err.Error())
+				return
+			}
+			//log.Printf("<log> current log '%s' reopened after remove", agent.currentLogPath)
 		}
 	}
 	log.Printf("<log> %d entries removed", len(idList))
@@ -291,7 +308,6 @@ func (agent *LogAgent) openCurrentLog() (err error){
 			return
 		}
 		log.Printf("<log> current log '%s' created", agent.currentLogPath)
-		return nil
 	}else{
 		//open
 		agent.currentFile, err = os.OpenFile(agent.currentLogPath, os.O_WRONLY|os.O_APPEND, OpenFilePerm)
@@ -312,6 +328,7 @@ func (agent *LogAgent) closeCurrentLog() (err error){
 		return
 	}
 	agent.currentFile = nil
+	log.Printf("<log> current log '%s' closed", agent.currentLogPath)
 	return nil
 }
 func parseLog(line string) (entry LogEntry, err error) {
