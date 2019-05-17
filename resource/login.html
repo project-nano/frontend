@@ -91,14 +91,25 @@
             outputMessage('no timeout available');
             return;
           }
-          var menu = data['menu'];
+          var menu = N.SortMenu(data['menu']);
+          if(0 === menu.length){
+            outputMessage('no menu item available');
+            return;
+          }
+          var firstMenu = menu[0];
           var group = data['group'];
           N.SaveSession(sessionID, user, group, menu, parseInt(timeout));
           //todo: redirect
           var params = parseQueryString();
-          var targetURL = '/dashboard.html'
+          var targetURL;
           if (params.has('previous')){
             targetURL = decodeURIComponent(params.get('previous'));
+          }else{
+            targetURL = N.GetMenuURL(firstMenu);
+            if (!targetURL){
+              outputMessage('no menu item named "' + firstMenu +'"');
+              return;
+            }
           }
           window.location.replace(targetURL);
         },

@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.9.1] - 2019-05-14
+## [0.9.1] - 2019-05-17
 
 ### Added
 
@@ -12,6 +12,8 @@
 
 - Add new API "GET /media_image_search/" for filtering media images by owner and group
 
+- Modify disk/media images
+
 ### Changed
 
 - Default landing page change to 'login.html'
@@ -21,6 +23,8 @@
 - Bind resources to current user/group: Create instance/upload&build images
 
 - Media images filtered using the current user and group
+
+- Display the appropriate page according to the menu after login
 
 ## [0.8.2] - 2019-04-4
 

@@ -440,6 +440,19 @@ N._menu_defines = [
   ['user', 'users.html', 'people', N.TagUser]
 ];
 
+N._image_tags = [
+  ['linux', 'Linux'],
+  ['windows', 'Windows'],
+  ['centos', 'Centos'],
+  ['ubuntu', 'Ubuntu'],
+  ['64bit', '64Bit'],
+  ['32bit', '32Bit']
+];
+
+N.GetAllImageTags = function(){
+  return this._image_tags;
+};
+
 N.SetLanguage = function(lang){
   if (lang != this.zh_CN & lang != this.en_US){
     alert('invalid language:' + lang);
@@ -587,6 +600,31 @@ N.GetAllMenus = function(){
   });
   return result;
 }
+
+N.GetMenuURL = function(name){
+  var result = undefined;
+  this._menu_defines.every(function(menuItem){
+    if(name == menuItem[0]){
+      result = menuItem[1];
+      return false;
+    }else{
+      return true;
+    }
+  });
+  return result;
+};
+
+N.SortMenu = function(menuList){
+  var sortedMenu = new Array();
+  var menuSet = new Set(menuList);
+  this._menu_defines.forEach((menu)=>{
+    var menuName = menu[0];
+    if (menuSet.has(menuName)){
+      sortedMenu.push(menuName);
+    }
+  });
+  return sortedMenu;
+};
 
 N.CreateMenuAndFooter = function(userName, menuList){
   var texts = this.GetTexts();
