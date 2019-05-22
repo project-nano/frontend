@@ -94,7 +94,7 @@ func CreateLogAgent(dataPath string) (agent *LogAgent, err error) {
 	}else{
 		agent.currentTime = time.Now().Truncate(time.Second)
 		agent.currentIndex = InitialEntryIndex
-		log.Printf("<log> debug: initial to %s.%d", agent.currentTime.Format(TimeFormatLayout), agent.currentIndex)
+		//log.Printf("<log> debug: initial to %s.%d", agent.currentTime.Format(TimeFormatLayout), agent.currentIndex)
 	}
 	err = agent.openCurrentLog()
 	return

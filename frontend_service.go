@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"sort"
 	"time"
+	"strconv"
 )
 
 type FrontEndService struct {
@@ -882,17 +883,33 @@ func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Req
 func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 
 	type RequestData struct {
-		Limit  int   `json:"limit"`
-		Start  int   `json:"start,omitempty"`
-		After  string `json:"after,omitempty"`
-		Before string `json:"before,omitempty"`
+		Limit  int
+		Start  int
+		After  string
+		Before string
 	}
 	var requestData RequestData
-	var decoder = json.NewDecoder(r.Body)
+
+	requestData.After = r.URL.Query().Get("after")
+	requestData.Before = r.URL.Query().Get("before")
 	var err error
-	if err = decoder.Decode(&requestData);err != nil{
-		ResponseFail(DefaultServerError, err.Error(), w)
-		return
+
+	var limitString = r.URL.Query().Get("limit")
+	if "" != limitString{
+		requestData.Limit, err = strconv.Atoi(limitString)
+		if err != nil{
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+	}
+
+	var startString = r.URL.Query().Get("start")
+	if "" != startString{
+		requestData.Start, err = strconv.Atoi(startString)
+		if err != nil{
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
 	}
 	const (
 		MaxLimit         = 100
@@ -946,8 +963,8 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		Content string `json:"content"`
 	}
 	type respData struct {
-		Logs  []logEntry
-		Total uint `json:"total"`
+		Logs  []logEntry `json:"logs"`
+		Total uint       `json:"total"`
 	}
 	var data respData
 
