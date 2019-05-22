@@ -40,6 +40,7 @@ type LogEntry struct {
 type LogResult struct {
 	Error error
 	Logs  []LogEntry
+	Total uint
 }
 
 type logCommand struct {
@@ -117,12 +118,12 @@ func (manager *LogManager) handleCommand(cmd logCommand){
 }
 
 func (manager *LogManager) handleQueryLog(condition LogQueryCondition, respChan chan LogResult) (err error) {
-	logs, err := manager.agent.Query(condition)
+	logs, total,  err := manager.agent.Query(condition)
 	if err != nil{
 		respChan <- LogResult{Error:err}
 		return
 	}
-	respChan <- LogResult{Logs:logs}
+	respChan <- LogResult{Logs:logs, Total: total}
 	return nil
 }
 

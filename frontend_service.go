@@ -940,18 +940,26 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
-	type respData struct {
+	type logEntry struct {
 		ID      string `json:"id"`
 		Time    string `json:"time"`
 		Content string `json:"content"`
 	}
-	var payload = make([]respData, 0)
-	for _, entry := range result.Logs{
-		var data = respData{ID:entry.ID, Content:entry.Content}
-		data.Time = entry.Time.Format(TimeFormatLayout)
-		payload = append(payload, data)
+	type respData struct {
+		Logs  []logEntry
+		Total uint `json:"total"`
 	}
-	ResponseOK(payload, w)
+	var data respData
+
+	data.Logs = make([]logEntry, 0)
+	for _, entry := range result.Logs{
+		var log = logEntry{ID:entry.ID, Content:entry.Content}
+		log.Time = entry.Time.Format(TimeFormatLayout)
+		data.Logs = append(data.Logs, log)
+	}
+	data.Total = result.Total
+
+	ResponseOK(data, w)
 }
 
 func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){

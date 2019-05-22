@@ -233,7 +233,11 @@ func (agent *LogAgent) Remove(idList []string) (err error) {
 	return nil
 }
 
-func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err error) {
+func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, total uint, err error) {
+	const (
+		MaxEntry = 1000
+	)
+	total = 0
 
 	if condition.EndTime.Sub(condition.BeginTime) < 0{
 		err = fmt.Errorf("invalid time range (%s ~ %s)", condition.BeginTime.Format(TimeFormatLayout), condition.EndTime.Format(TimeFormatLayout))
@@ -277,28 +281,27 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, err 
 				if entry.Time.After(condition.EndTime){
 					break
 				}
-				//store log
-				logs = append(logs, entry)
-				queried++
-				//log.Printf("<log> debug: entry '%s' queried", entry.ID)
-				//check limit
-				if queried >= condition.Limit{
-					//log.Printf("<log> debug: %d entries queried as '%s'", len(logs), logFilePath)
+				if total >= MaxEntry{
 					break
+				}
+				total++
+				if queried < condition.Limit{
+					//store log
+					logs = append(logs, entry)
+					queried++
 				}
 			}
 		}//end scanner
-		if queried >= condition.Limit{
-			//log.Printf("<log> debug: %d entries queried at date '%s'", len(logs), date.Format(DateFormat))
+		if total >= MaxEntry{
 			break
 		}
 	}
-	log.Printf("<log> %d entries queried between (%s ~ %s), start from %d, with limit %d",
-		len(logs),
+	log.Printf("<log> %d / %d entries queried between (%s ~ %s), start from %d, with limit %d",
+		len(logs), total,
 		condition.BeginTime.Format(TimeFormatLayout),
 		condition.EndTime.Format(TimeFormatLayout),
 		condition.Start, condition.Limit)
-	return logs, nil
+	return logs, total,nil
 }
 
 func (agent *LogAgent) openCurrentLog() (err error){
