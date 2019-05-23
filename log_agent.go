@@ -249,7 +249,7 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 	for date := condition.BeginTime; date.Before(endDate); date = date.Add(Day){
 		var logFilePath = filepath.Join(agent.logRoot, date.Format(MonthFormat), fmt.Sprintf("%s.log", date.Format(DateFormat)))
 		if _, err = os.Stat(logFilePath); os.IsNotExist(err){
-			log.Printf("<log> warning: query ignores absent log '%s'", logFilePath)
+			//log.Printf("<log> warning: query ignores absent log '%s'", logFilePath)
 			continue
 		}
 		var logFile *os.File
@@ -273,8 +273,7 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 			}
 			if inTimeRange{
 				if offset < condition.Start{
-					//pass current entry
-					//log.Printf("<log> debug: pass entry '%s' at offset %d", entry.ID, offset)
+					total++
 					offset++
 					continue
 				}

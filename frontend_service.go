@@ -17,6 +17,8 @@ import (
 	"sort"
 	"time"
 	"strconv"
+	"strings"
+	"github.com/pkg/errors"
 )
 
 type FrontEndService struct {
@@ -805,10 +807,35 @@ func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Reques
 		Menu    []string `json:"menu,omitempty"`
 		Timeout int      `json:"timeout"`
 		Group   string   `json:"group"`
+		Address string   `json:"address,omitempty"`
 	}
 	var session = result.Session
-	var payload = RespSession{session.User, session.Menu, session.Timeout, session.Group}
+	var payload = RespSession{session.User, session.Menu, session.Timeout, session.Group, session.Address}
 	ResponseOK(payload, w)
+}
+
+func getRemoteIP(r *http.Request) (ip string, err error) {
+	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
+		addresses := strings.Split(r.Header.Get(h), ",")
+		// march from right to left until we get a public address
+		// that will be the address right before our proxy.
+		for i := len(addresses) -1 ; i >= 0; i-- {
+			ip = strings.TrimSpace(addresses[i])
+			// header can contain spaces too, strip those out.
+			if realIP := net.ParseIP(ip); realIP != nil{
+				return ip, nil
+			}
+		}
+	}
+	//get from remote address
+	ip, _, err = net.SplitHostPort(r.RemoteAddr)
+	if err != nil{
+		return
+	}
+	if net.ParseIP(ip) != nil{
+		return ip, nil
+	}
+	return "", errors.New("no remote address available")
 }
 
 func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
@@ -847,9 +874,15 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 		user = result.User
 	}
 	{
+		var remoteAddress string
+		remoteAddress, err = getRemoteIP(r)
+		if err != nil{
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
 		//allocate
 		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.AllocateSession(user.Name, user.Group, requestData.Nonce, user.Menu, respChan)
+		service.sessionManager.AllocateSession(user.Name, user.Group, requestData.Nonce, remoteAddress,  user.Menu, respChan)
 		var result = <- respChan
 		if result.Error != nil{
 			ResponseFail(DefaultServerError, result.Error.Error(), w)
