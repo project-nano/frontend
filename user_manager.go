@@ -183,6 +183,7 @@ func (manager *UserManager) loadConfig() (err error){
 	if err != nil{
 		return
 	}
+	defer file.Close()
 	var decoder = json.NewDecoder(file)
 	var config UserConfig
 	if err = decoder.Decode(&config); err != nil{

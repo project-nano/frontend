@@ -60,9 +60,6 @@ func CreateLogManager(dataPath string) (manager *LogManager, err error) {
 	manager.commands = make(chan logCommand, DefaultQueueLength)
 	manager.runner = framework.CreateSimpleRunner(manager.Routine)
 	manager.agent, err = CreateLogAgent(dataPath)
-	//if err != nil{
-	//	return
-	//}
 	return
 }
 
@@ -76,14 +73,21 @@ func (manager *LogManager) Stop() error{
 
 func (manager *LogManager) Routine(c framework.RoutineController){
 	log.Println("<log> started")
+	const (
+		FlushInterval = 30 * time.Second
+	)
+	var flushTicker = time.NewTicker(FlushInterval)
 	for !c.IsStopping() {
 		select {
 		case <-c.GetNotifyChannel():
 			c.SetStopping()
+		case <- flushTicker.C:
+			manager.agent.Flush()
 		case cmd := <-manager.commands:
 			manager.handleCommand(cmd)
 		}
 	}
+	manager.agent.Close()
 	c.NotifyExit()
 	log.Println("<log> stopped")
 }
