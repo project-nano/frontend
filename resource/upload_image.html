@@ -235,6 +235,7 @@ function startTransport(name, description, tags, imageId){
           )
         )
       );
+      N.WriteOperateLog('upload media image ' + name + ' / ' + imageId);
     },
     error: function(jqXHR, textStatus, errorThrown){
       releaseImage(imageId);

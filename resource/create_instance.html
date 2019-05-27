@@ -232,32 +232,7 @@
 <script type="text/javascript" src="js/materialize.min.js"></script>
 <script type="text/javascript" src="js/nano.js"></script>
 <script>
-N.ValidateSession();
 var texts = N.GetTexts();
-$('#back-caption').append(texts.get(N.TagBack));
-$('#create-caption').prepend(texts.get(N.TagCreate));
-$('.modal-footer > a:first-child').text(texts.get(N.TagCancel));
-$('.modal-footer > a:last-child').text(texts.get(N.TagConfirm));
-
-$('#name-label').text(texts.get(N.TagName));
-$('#pool-label').text(texts.get(N.TagComputePool));
-$('#core-label').text(texts.get(N.TagCore));
-$('#memory-label').text(texts.get(N.TagMemory));
-$('#system-label').text(texts.get(N.TagSystem));
-$('#system-disk-label').text(texts.get(N.TagSystemDisk));
-$('#system-image-label').text(texts.get(N.TagSystemImage));
-$('#blank-system-label').text(texts.get(N.TagBlankSystem));
-$('#data-disk-label').text(texts.get(N.TagDataDisk));
-$('#auto-start-label').text(texts.get(N.TagAutoStart));
-
-$('#auto-start-switch').append(
-  $('<label>').append(texts.get(N.TagDisable)).append(
-    $('<input>').attr('type', 'checkbox').attr('name', 'auto_start').attr('id', 'auto_start').prop('checked', true)
-  ).append(
-    $('<span>').addClass('lever')
-  ).append(texts.get(N.TagEnable))
-)
-
 var versions = new Map(
   [
     ["centos7", {Name: 'CentOS 7 or Later', System: 'linux', Enable: true}],
@@ -268,7 +243,6 @@ var versions = new Map(
   ]
 );
 
-M.AutoInit();
 
 function loadOptions(){
   $.getJSON("/compute_pools/", function(result){
@@ -349,8 +323,15 @@ function finishCreate(){
       )
     )
   );
+  if (monitorInstanceID){
+    N.WriteOperateLog('create new instance ' + instanceName + ' / ' + monitorInstanceID);
+  }else{
+    N.WriteOperateLog('create new instance ' + instanceName);
+  }
+
 }
 
+var instanceName;
 var monitorInstanceID;
 
 function checkResult(){
@@ -410,8 +391,6 @@ function monitorCreateProgress(id){
     }
   });
 }
-
-
 
 function createGuest(request){
   //update form
@@ -682,6 +661,7 @@ function submitConfig() {
       }
       return;
     }
+    instanceName = request.name;
 
     request.owner = N.GetCurrentUser();
     request.group = N.GetCurrentGroup();
@@ -746,6 +726,7 @@ function parseQueryString(){
 }
 
 $(function(){
+  N.ValidateSession();
   var params = parseQueryString();
   if (params.has('origin')){
     originURL = params.get('origin');
@@ -756,6 +737,32 @@ $(function(){
   if (params.has('cell')){
     cellName = params.get('cell');
   }
+
+  $('#back-caption').append(texts.get(N.TagBack));
+  $('#create-caption').prepend(texts.get(N.TagCreate));
+  $('.modal-footer > a:first-child').text(texts.get(N.TagCancel));
+  $('.modal-footer > a:last-child').text(texts.get(N.TagConfirm));
+
+  $('#name-label').text(texts.get(N.TagName));
+  $('#pool-label').text(texts.get(N.TagComputePool));
+  $('#core-label').text(texts.get(N.TagCore));
+  $('#memory-label').text(texts.get(N.TagMemory));
+  $('#system-label').text(texts.get(N.TagSystem));
+  $('#system-disk-label').text(texts.get(N.TagSystemDisk));
+  $('#system-image-label').text(texts.get(N.TagSystemImage));
+  $('#blank-system-label').text(texts.get(N.TagBlankSystem));
+  $('#data-disk-label').text(texts.get(N.TagDataDisk));
+  $('#auto-start-label').text(texts.get(N.TagAutoStart));
+
+  $('#auto-start-switch').append(
+    $('<label>').append(texts.get(N.TagDisable)).append(
+      $('<input>').attr('type', 'checkbox').attr('name', 'auto_start').attr('id', 'auto_start').prop('checked', true)
+    ).append(
+      $('<span>').addClass('lever')
+    ).append(texts.get(N.TagEnable))
+  )
+
+  M.AutoInit();
 
   initialForm();
 });

@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.9.1] - 2019-05-22
+## [0.9.1] - 2019-05-27
 
 ### Added
 
@@ -14,6 +14,8 @@
 
 - Modify disk/media images
 
+- Add operate logs in most pages
+
 ### Changed
 
 - Default landing page change to 'login.html'
@@ -25,6 +27,10 @@
 - Media images filtered using the current user and group
 
 - Display the appropriate page according to the menu after login
+
+- Add padding space for sidenav
+
+- Move start/stop/restart/reset instance into nano.js
 
 ## [0.8.2] - 2019-04-4
 

@@ -2362,7 +2362,9 @@ Manage authenticated session
         "menu": ["dashboard", "compute_pool", "address_pool", "instance"],
         "resource": [],
         "user": "nano",
-        "group": "admin"
+        "group": "admin",
+        "address": "192.168.1.100"
+
       }
     }
   ]
@@ -2384,18 +2386,21 @@ Manage authenticated session
     {
       "error_code": 0,
       "message": "",
-      "data":[
-        {
-          "entry": "201812011457390001",
-          "time": "2018-12-01 14:57:39",
-          "content": "admin create new user example"
-        },
-        {
-          "entry": "201812031427190001",
-          "time": "2018-12-03 14:27:19",
-          "content": "nano.sabrina create new guest nano.test1"
-        }
-      ]
+      "data":{
+        "logs": [
+          {
+            "id": "201812011457390001",
+            "time": "2018-12-01 14:57:39",
+            "content": "admin create new user example"
+          },
+          {
+            "id": "201812031427190001",
+            "time": "2018-12-03 14:27:19",
+            "content": "nano.sabrina create new guest nano.test1"
+          }
+        ],
+        "total": 100
+      }
     }
   ]
 

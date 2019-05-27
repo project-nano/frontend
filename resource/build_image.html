@@ -244,6 +244,7 @@ function monitorProgress(){
             )
           )
         );
+        N.WriteOperateLog('build disk image ' + imageID);
         return;
       }
       var progress = result['data']['progress'] + '%';

@@ -811,6 +811,7 @@ function submitCreateRequest() {
     }else{
       request.auto_start = false;
     }
+    N.WriteOperateLog('try create ' + request.count + ' guest(es) in pool ' + request.pool);
     createGuest(request);
 }
 

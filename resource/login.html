@@ -98,7 +98,8 @@
           }
           var firstMenu = menu[0];
           var group = data['group'];
-          N.SaveSession(sessionID, user, group, menu, parseInt(timeout));
+          var address = data['address'];
+          N.SaveSession(sessionID, user, group, menu, address, parseInt(timeout));
           //todo: redirect
           var params = parseQueryString();
           var targetURL;
@@ -111,6 +112,7 @@
               return;
             }
           }
+          N.WriteOperateLog('log in');
           window.location.replace(targetURL);
         },
         "json"

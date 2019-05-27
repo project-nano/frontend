@@ -185,8 +185,9 @@
                M.toast({html: 'delete image fail: ' + result['message'], outDuration: 1000});
                return;
            }
-           M.toast({html: 'disk image "' + name + '" deleted'})
+           M.toast({html: 'disk image "' + name + '" deleted'});
            setTimeout(refresh, 1500);
+           N.WriteOperateLog('delete disk image ' + name + ' / ' + id);
        }
       });
     }
@@ -312,8 +313,9 @@
                M.toast({html: 'modify image fail: ' + result['message'], outDuration: 1000});
                return;
            }
-           M.toast({html: 'image "' + imageID + '" modified'})
+           M.toast({html: 'image "' + imageID + '" modified'});
            setTimeout(refresh, 500);
+           N.WriteOperateLog('modify disk image ' + imageName + ' / ' + imageID);
        }
       });
 
