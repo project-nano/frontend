@@ -1,5 +1,17 @@
 # Change Log
 
+## [1.0.1] - 2019-06-19
+
+### Added
+
+- Modify CPU prioirty
+
+- Set threshold of Disk/Network IO
+
+### Changed
+
+- URL of guest operates change from '/guest/' to '/guests/'.
+
 ## [0.9.1] - 2019-05-27
 
 ### Added

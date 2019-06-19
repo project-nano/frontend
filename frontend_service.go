@@ -42,7 +42,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion = "0.9.1"
+	CurrentVersion = "1.0.1"
 )
 
 
@@ -197,15 +197,18 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guests/:id", DELETE)
 
 	redirect(router, "/guest_search/*filepath", GET)
-	redirect(router, "/guest/:id/cores", PUT)
-	redirect(router, "/guest/:id/memory", PUT)
-	redirect(router, "/guest/:id/system/", PUT)
+	redirect(router, "/guests/:id/cores", PUT)
+	redirect(router, "/guests/:id/memory", PUT)
+	redirect(router, "/guests/:id/system/", PUT)
+	redirect(router, "/guests/:id/qos/cpu", PUT)
+	redirect(router, "/guests/:id/qos/disk", PUT)
+	redirect(router, "/guests/:id/qos/network", PUT)
 
-	redirect(router, "/guest/:id/name/", PUT)//modify guest name
-	redirect(router, "/guest/:id/auth", PUT)
-	redirect(router, "/guest/:id/auth", GET)
-	redirect(router, "/guest/:id/disks/resize/:index", PUT)
-	redirect(router, "/guest/:id/disks/shrink/:index", PUT)
+	redirect(router, "/guests/:id/name/", PUT)//modify guest name
+	redirect(router, "/guests/:id/auth", PUT)
+	redirect(router, "/guests/:id/auth", GET)
+	redirect(router, "/guests/:id/disks/resize/:index", PUT)
+	redirect(router, "/guests/:id/disks/shrink/:index", PUT)
 
 	redirect(router, "/compute_zone_status/", GET)
 	redirect(router, "/compute_pool_status/", GET)
@@ -282,9 +285,9 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/migrations/", GET)
 	redirect(router, "/migrations/:id", GET)
 	redirect(router, "/migrations/", POST)
-	
+
 	//inner function
-	
+
 	//user roles
 	router.GET("/roles/", service.queryRoles)
 	router.GET("/roles/:role", service.getRole)

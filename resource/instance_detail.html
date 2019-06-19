@@ -571,7 +571,7 @@
       var request = new Object();
       request.name = newName;
       $.ajax({
-        url: '/guest/' + instanceID + '/name/',
+        url: '/guests/' + instanceID + '/name/',
         method: "PUT",
         dataType: "json",
         data: JSON.stringify(request),
@@ -609,7 +609,7 @@
       var request = new Object();
       request.cores = newCores;
       $.ajax({
-        url: '/guest/' + instanceID + '/cores',
+        url: '/guests/' + instanceID + '/cores',
         method: "PUT",
         dataType: "json",
         data: JSON.stringify(request),
@@ -645,7 +645,7 @@
       var request = new Object();
       request.memory = memoryInBytes;
       $.ajax({
-        url: '/guest/' + instanceID + '/memory',
+        url: '/guests/' + instanceID + '/memory',
         method: "PUT",
         dataType: "json",
         data: JSON.stringify(request),
@@ -690,7 +690,7 @@
       var request = new Object();
       request.size = diskInBytes;
       $.ajax({
-        url: '/guest/' + instanceID + '/disks/resize/' + index,
+        url: '/guests/' + instanceID + '/disks/resize/' + index,
         method: "PUT",
         dataType: "json",
         data: JSON.stringify(request),
@@ -722,7 +722,7 @@
       var request = new Object();
       N.WriteOperateLog('try shrink disk of ' + instanceID);
       $.ajax({
-        url: '/guest/' + instanceID + '/disks/shrink/' + index,
+        url: '/guests/' + instanceID + '/disks/shrink/' + index,
         method: "PUT",
         dataType: "json",
         data: JSON.stringify(request),
@@ -740,7 +740,7 @@
     }
 
     function showPassword(){
-      var url = '/guest/' + instanceID + '/auth';
+      var url = '/guests/' + instanceID + '/auth';
       $.getJSON(
         url,
         function(result){
@@ -780,7 +780,7 @@
     }
 
     function showModifyPassword(){
-      var url = '/guest/' + instanceID + '/auth';
+      var url = '/guests/' + instanceID + '/auth';
       $.getJSON(
         url,
         function(result){
@@ -815,7 +815,7 @@
       request.user = user;
       request.password = password;
       $.ajax({
-        url: '/guest/' + instanceID + '/auth',
+        url: '/guests/' + instanceID + '/auth',
         method: "PUT",
         dataType: "json",
         data: JSON.stringify(request),
