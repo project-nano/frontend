@@ -4,7 +4,7 @@
 
 ### Added
 
-- Modify CPU prioirty
+- Modify CPU priority
 
 - Set threshold of Disk/Network IO
 
