@@ -42,7 +42,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion = "1.0.1"
+	CurrentVersion = "1.0.0"
 )
 
 
