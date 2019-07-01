@@ -1,7 +1,7 @@
 package main
 
 import (
-	"nano/framework"
+	"github.com/project-nano/framework"
 	"net"
 	"net/http"
 	"context"
@@ -161,31 +161,15 @@ func (service *FrontEndService) Routine(c framework.RoutineController){
 
 func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	const (
-		GET    = iota
-		POST
-		PUT
-		DELETE
+		GET    = "GET"
+		POST   = "POST"
+		PUT    = "PUT"
+		DELETE = "DELETE"
 	)
 
-	var redirect = func(r *httprouter.Router, path string, method int) {
-		switch method {
-		case GET:
-			r.GET(path, service.redirectToBackend)
-		case POST:
-			r.POST(path, service.redirectToBackend)
-		case PUT:
-			r.PUT(path, service.redirectToBackend)
-		case DELETE:
-			r.DELETE(path, service.redirectToBackend)
-		default:
-			log.Printf("<frontend> define redirect fail, invalid method %d", method)
-		}
+	var redirect = func(r *httprouter.Router, path string, method string) {
+		r.Handle(method, path, service.redirectToBackend)
 	}
-
-	router.GET("/", service.defaultLandingPage)
-	router.GET("/initial.html", service.initialSystem)
-	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
-	router.POST("/monitor_channels/", service.handleCreateChannel)
 
 	//API
 	redirect(router, "/instances/:id", GET)
@@ -196,7 +180,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guests/", POST)
 	redirect(router, "/guests/:id", DELETE)
 
-	redirect(router, "/guest_search/*filepath", GET)
 	redirect(router, "/guests/:id/cores", PUT)
 	redirect(router, "/guests/:id/memory", PUT)
 	redirect(router, "/guests/:id/system/", PUT)
@@ -250,7 +233,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/storage_pools/:pool", PUT)
 	redirect(router, "/storage_pools/:pool", DELETE)
 
-	redirect(router, "/media_image_search/*filepath", GET)
 	redirect(router, "/media_images/", GET)
 	redirect(router, "/media_images/", POST)
 	redirect(router, "/media_images/:id", GET)
@@ -258,7 +240,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/media_images/:id", PUT)//modify media image info
 	redirect(router, "/media_image_files/:id", POST)
 
-	redirect(router, "/disk_image_search/*filepath", GET)
 	redirect(router, "/disk_images/", POST)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
@@ -280,6 +261,8 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/batch/create_guest/:id", GET)//query batch creating
 	redirect(router, "/batch/delete_guest/", POST)//start batch deleting
 	redirect(router, "/batch/delete_guest/:id", GET)//query batch deleting
+	redirect(router, "/batch/stop_guest/", POST)//start batch stopping
+	redirect(router, "/batch/stop_guest/:id", GET)//query batch stopping
 
 	//migrations
 	redirect(router, "/migrations/", GET)
@@ -287,6 +270,11 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/migrations/", POST)
 
 	//inner function
+
+	router.GET("/", service.defaultLandingPage)
+	router.GET("/initial.html", service.initialSystem)
+	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
+	router.POST("/monitor_channels/", service.handleCreateChannel)
 
 	//user roles
 	router.GET("/roles/", service.queryRoles)
@@ -327,6 +315,14 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.GET("/logs/", service.queryLogs)
 	router.POST("/logs/", service.addLog)
 	router.DELETE("/logs/", service.removeLog)
+
+	//visibility
+	router.GET("/resource_visibilities/:session", service.getVisibility)
+	router.PUT("/resource_visibilities/:session", service.updateSession)
+
+	router.GET("/guest_search/*filepath", service.searchGuests)
+	router.GET("/media_image_search/*filepath", service.searchMediaImages)
+	router.GET("/disk_image_search/*filepath", service.searchDiskImages)
 }
 
 func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
@@ -340,6 +336,156 @@ func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
 }
+
+func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	const (
+		ParamSession = "session"
+		ParamOwner = "owner"
+		ParamGroup = "group"
+	)
+	var sessionID = r.URL.Query().Get(ParamSession)
+	var err error
+	if 0 == len(sessionID){
+		err = errors.New("session ID required")
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var groupName string
+	{
+		//verify session
+		var respChan = make(chan SessionResult, 1)
+		service.sessionManager.GetSession(sessionID, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		groupName = result.Session.Group
+		r.URL.Query().Set(ParamOwner, result.Session.User)
+	}
+	{
+		var respChan = make(chan UserResult, 1)
+		service.userManager.GetVisibility(groupName, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		var visibility = result.Visibility
+		//replace params
+		r.URL.Query().Set(ParamSession, "")
+		if visibility.InstanceVisible{
+			r.URL.Query().Set(ParamGroup, groupName)
+		}else{
+			r.URL.Query().Set(ParamGroup, "")
+		}
+	}
+	r.Host = service.backendHost
+	service.reverseProxy.ServeHTTP(w, r)
+}
+
+
+func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	const (
+		ParamSession = "session"
+		ParamOwner = "owner"
+		ParamGroup = "group"
+	)
+	var sessionID = r.URL.Query().Get(ParamSession)
+	var err error
+	if 0 == len(sessionID){
+		err = errors.New("session ID required")
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var groupName string
+	{
+		//verify session
+		var respChan = make(chan SessionResult, 1)
+		service.sessionManager.GetSession(sessionID, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		groupName = result.Session.Group
+		r.URL.Query().Set(ParamOwner, result.Session.User)
+	}
+	{
+		var respChan = make(chan UserResult, 1)
+		service.userManager.GetVisibility(groupName, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		var visibility = result.Visibility
+		//replace params
+		r.URL.Query().Set(ParamSession, "")
+		if visibility.DiskImageVisible{
+			r.URL.Query().Set(ParamGroup, groupName)
+		}else{
+			r.URL.Query().Set(ParamGroup, "")
+		}
+	}
+	r.Host = service.backendHost
+	service.reverseProxy.ServeHTTP(w, r)
+}
+
+
+func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	const (
+		ParamSession = "session"
+		ParamOwner = "owner"
+		ParamGroup = "group"
+	)
+	var sessionID = r.URL.Query().Get(ParamSession)
+	var err error
+	if 0 == len(sessionID){
+		err = errors.New("session ID required")
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var groupName string
+	{
+		//verify session
+		var respChan = make(chan SessionResult, 1)
+		service.sessionManager.GetSession(sessionID, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		groupName = result.Session.Group
+		r.URL.Query().Set(ParamOwner, result.Session.User)
+	}
+	{
+		var respChan = make(chan UserResult, 1)
+		service.userManager.GetVisibility(groupName, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		var visibility = result.Visibility
+		//replace params
+		r.URL.Query().Set(ParamSession, "")
+		if visibility.MediaImageVisible{
+			r.URL.Query().Set(ParamGroup, groupName)
+		}else{
+			r.URL.Query().Set(ParamGroup, "")
+		}
+	}
+	r.Host = service.backendHost
+	service.reverseProxy.ServeHTTP(w, r)
+}
+
 
 func (service *FrontEndService) handleFileRequest(w http.ResponseWriter, r *http.Request){
 	if !service.userInitialed{
@@ -1057,4 +1203,69 @@ func (service *FrontEndService) removeLog(w http.ResponseWriter, r *http.Request
 		return
 	}
 	ResponseOK("", w)
+}
+
+func (service *FrontEndService) updateVisibility(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	var sessionID = params.ByName("session")
+	var err error
+	var groupName string
+	{
+		//verify session
+		var respChan = make(chan SessionResult, 1)
+		service.sessionManager.GetSession(sessionID, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		groupName = result.Session.Group
+	}
+	{
+		//update
+		var visibility GroupVisibility
+		var decoder = json.NewDecoder(r.Body)
+		if err = decoder.Decode(&visibility); err != nil{
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		var respChan = make(chan error, 1)
+		service.userManager.UpdateVisibility(groupName, visibility, respChan)
+		err = <- respChan
+		if err != nil{
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+	}
+	ResponseOK("", w)
+}
+
+func (service *FrontEndService) getVisibility(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	var sessionID = params.ByName("session")
+	var err error
+	var groupName string
+	{
+		//verify session
+		var respChan = make(chan SessionResult, 1)
+		service.sessionManager.GetSession(sessionID, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		groupName = result.Session.Group
+	}
+	{
+		var respChan = make(chan UserResult, 1)
+		service.userManager.GetVisibility(groupName, respChan)
+		var result = <- respChan
+		if result.Error != nil{
+			err = result.Error
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		var visibility = result.Visibility
+		ResponseOK(visibility, w)
+	}
 }

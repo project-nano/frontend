@@ -2,7 +2,7 @@ package main
 
 import (
 	"time"
-	"nano/framework"
+	"github.com/project-nano/framework"
 	"log"
 )
 

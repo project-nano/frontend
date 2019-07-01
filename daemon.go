@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"io/ioutil"
-	"nano/framework"
+	"github.com/project-nano/framework"
 )
 
 type FrontEndConfig struct {

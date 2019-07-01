@@ -1,7 +1,7 @@
 package main
 
 import (
-	"nano/framework"
+	"github.com/project-nano/framework"
 	"log"
 	"time"
 	"github.com/satori/go.uuid"

@@ -8,9 +8,15 @@
 
 - Set threshold of Disk/Network IO
 
+- Batch stop guests
+
+- Enable get/update group visibility
+
 ### Changed
 
 - URL of guest operates change from '/guest/' to '/guests/'.
+
+- Search guest/media/disk images via sessioin
 
 ## [0.9.1] - 2019-05-27
 

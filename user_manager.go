@@ -2,7 +2,7 @@ package main
 
 import (
 	"path/filepath"
-	"nano/framework"
+	"github.com/project-nano/framework"
 	"log"
 	"sort"
 	"fmt"
@@ -21,11 +21,18 @@ type UserRole struct {
 	Menu []string `json:"menu,omitempty"`
 }
 
+type GroupVisibility struct {
+	InstanceVisible   bool `json:"instance_visible,omitempty"`
+	DiskImageVisible  bool `json:"disk_image_visible,omitempty"`
+	MediaImageVisible bool `json:"media_image_visible,omitempty"`
+}
+
 type UserGroup struct {
-	Name    string          `json:"name"`
-	Display string          `json:"display,omitempty"`
-	Roles   map[string]bool `json:"-"`
-	Members map[string]bool `json:"-"`
+	Name       string          `json:"name"`
+	Display    string          `json:"display,omitempty"`
+	Roles      map[string]bool `json:"-"`
+	Members    map[string]bool `json:"-"`
+	Visibility GroupVisibility `json:"visibility"`
 }
 
 type LoginUser struct {
@@ -38,13 +45,14 @@ type LoginUser struct {
 }
 
 type UserResult struct {
-	Error     error
-	Role      UserRole
-	RoleList  []UserRole
-	Group     UserGroup
-	GroupList []UserGroup
-	User      LoginUser
-	UserList  []LoginUser
+	Error      error
+	Role       UserRole
+	RoleList   []UserRole
+	Group      UserGroup
+	GroupList  []UserGroup
+	User       LoginUser
+	UserList   []LoginUser
+	Visibility GroupVisibility
 }
 
 type cryptMethod int
@@ -84,6 +92,8 @@ const (
 	cmdVerifyUserPassword
 	cmdSearchUser
 	cmdIsInitialed
+	cmdUpdateVisibility
+	cmdGetVisibility
 )
 
 type userCMD struct {
@@ -98,6 +108,7 @@ type userCMD struct {
 	Password   string
 	Menu       []string
 	RoleList   []string
+	Visibility GroupVisibility
 	ResultChan chan UserResult
 	ErrorChan  chan error
 }
@@ -341,6 +352,13 @@ func (manager *UserManager) IsInitialed(resp chan error)  {
 	manager.commands <- userCMD{Type: cmdIsInitialed, ErrorChan:resp}
 }
 
+func (manager *UserManager) UpdateVisibility(group string, visibility GroupVisibility, resp chan error)  {
+	manager.commands <- userCMD{Type: cmdUpdateVisibility, Group:group, Visibility:visibility, ErrorChan:resp}
+}
+
+func (manager *UserManager) GetVisibility(group string, resp chan UserResult)  {
+	manager.commands <- userCMD{Type: cmdGetVisibility, Group:group, ResultChan:resp}
+}
 
 func (manager *UserManager) handleCommand(cmd userCMD){
 	var err error
@@ -512,7 +530,7 @@ func (manager *UserManager) handleAddGroup(name, display string, roleList []stri
 		resp <- err
 		return err
 	}
-	var group = UserGroup{name, display, map[string]bool{}, map[string]bool{}}
+	var group = UserGroup{name, display, map[string]bool{}, map[string]bool{}, GroupVisibility{}}
 	for _, roleName := range roleList{
 		if _, exists := manager.roles[roleName]; !exists{
 			err = fmt.Errorf("invalid role '%s'", roleName)
@@ -852,6 +870,31 @@ func (manager *UserManager) handleIsInitialed(resp chan error)  (err error) {
 	}else{
 		resp <- nil
 	}
+	return nil
+}
+
+func (manager *UserManager) handleUpdateVisibility(groupName string, visibility GroupVisibility, resp chan error) (err error){
+	group, exists := manager.groups[groupName]
+	if !exists{
+		err = fmt.Errorf("invalid group '%s'", groupName)
+		resp <- err
+		return
+	}
+	group.Visibility = visibility
+	manager.groups[groupName] = group
+	resp <- nil
+	log.Printf("<user> resource visibility of group '%s' updated", groupName)
+	return manager.saveConfig()
+}
+
+func (manager *UserManager) handleGetVisibility(groupName string, resp chan UserResult) (err error){
+	group, exists := manager.groups[groupName]
+	if !exists{
+		err = fmt.Errorf("invalid group '%s'", groupName)
+		resp <- UserResult{Error:err}
+		return
+	}
+	resp <- UserResult{Visibility: group.Visibility}
 	return nil
 }
 
