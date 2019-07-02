@@ -318,7 +318,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	//visibility
 	router.GET("/resource_visibilities/:session", service.getVisibility)
-	router.PUT("/resource_visibilities/:session", service.updateSession)
+	router.PUT("/resource_visibilities/:session", service.updateVisibility)
 
 	router.GET("/guest_search/*filepath", service.searchGuests)
 	router.GET("/media_image_search/*filepath", service.searchMediaImages)
@@ -350,6 +350,7 @@ func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Requ
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	var queryParams = r.URL.Query()
 	var groupName string
 	{
 		//verify session
@@ -362,7 +363,7 @@ func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		groupName = result.Session.Group
-		r.URL.Query().Set(ParamOwner, result.Session.User)
+		queryParams.Set(ParamOwner, result.Session.User)
 	}
 	{
 		var respChan = make(chan UserResult, 1)
@@ -375,12 +376,11 @@ func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Requ
 		}
 		var visibility = result.Visibility
 		//replace params
-		r.URL.Query().Set(ParamSession, "")
+		queryParams.Del(ParamSession)
 		if visibility.InstanceVisible{
-			r.URL.Query().Set(ParamGroup, groupName)
-		}else{
-			r.URL.Query().Set(ParamGroup, "")
+			queryParams.Set(ParamGroup, groupName)
 		}
+		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
@@ -400,6 +400,7 @@ func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	var queryParams = r.URL.Query()
 	var groupName string
 	{
 		//verify session
@@ -412,7 +413,7 @@ func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.
 			return
 		}
 		groupName = result.Session.Group
-		r.URL.Query().Set(ParamOwner, result.Session.User)
+		queryParams.Set(ParamOwner, result.Session.User)
 	}
 	{
 		var respChan = make(chan UserResult, 1)
@@ -425,12 +426,11 @@ func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.
 		}
 		var visibility = result.Visibility
 		//replace params
-		r.URL.Query().Set(ParamSession, "")
+		queryParams.Del(ParamSession)
 		if visibility.DiskImageVisible{
-			r.URL.Query().Set(ParamGroup, groupName)
-		}else{
-			r.URL.Query().Set(ParamGroup, "")
+			queryParams.Set(ParamGroup, groupName)
 		}
+		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
@@ -451,6 +451,7 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 		return
 	}
 	var groupName string
+	var queryParams = r.URL.Query()
 	{
 		//verify session
 		var respChan = make(chan SessionResult, 1)
@@ -462,8 +463,9 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 			return
 		}
 		groupName = result.Session.Group
-		r.URL.Query().Set(ParamOwner, result.Session.User)
+		queryParams.Set(ParamOwner, result.Session.User)
 	}
+
 	{
 		var respChan = make(chan UserResult, 1)
 		service.userManager.GetVisibility(groupName, respChan)
@@ -475,17 +477,15 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 		}
 		var visibility = result.Visibility
 		//replace params
-		r.URL.Query().Set(ParamSession, "")
+		queryParams.Del(ParamSession)
 		if visibility.MediaImageVisible{
-			r.URL.Query().Set(ParamGroup, groupName)
-		}else{
-			r.URL.Query().Set(ParamGroup, "")
+			queryParams.Set(ParamGroup, groupName)
 		}
+		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
 }
-
 
 func (service *FrontEndService) handleFileRequest(w http.ResponseWriter, r *http.Request){
 	if !service.userInitialed{
@@ -1265,7 +1265,12 @@ func (service *FrontEndService) getVisibility(w http.ResponseWriter, r *http.Req
 			ResponseFail(DefaultServerError, err.Error(), w)
 			return
 		}
-		var visibility = result.Visibility
-		ResponseOK(visibility, w)
+		type VisibilityPayload struct {
+			InstanceVisible   bool `json:"instance_visible"`
+			DiskImageVisible  bool `json:"disk_image_visible"`
+			MediaImageVisible bool `json:"media_image_visible"`
+		}
+		var v = result.Visibility
+		ResponseOK(VisibilityPayload{v.InstanceVisible, v.DiskImageVisible, v.MediaImageVisible}, w)
 	}
 }

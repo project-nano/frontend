@@ -1,6 +1,6 @@
 # Change Log
 
-## [1.0.0] - 2019-06-19
+## [1.0.0] - 2019-07-02
 
 ### Added
 
@@ -16,7 +16,7 @@
 
 - URL of guest operates change from '/guest/' to '/guests/'.
 
-- Search guest/media/disk images via sessioin
+- Search guest/media/disk images via session
 
 ## [0.9.1] - 2019-05-27
 

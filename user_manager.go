@@ -169,10 +169,11 @@ func (manager *UserManager) Routine(c framework.RoutineController){
 }
 
 type GroupConfig struct {
-	Name    string   `json:"name"`
-	Display string   `json:"display,omitempty"`
-	Role    []string `json:"role,omitempty"`
-	Members []string `json:"members,omitempty"`
+	Name       string          `json:"name"`
+	Display    string          `json:"display,omitempty"`
+	Role       []string        `json:"role,omitempty"`
+	Members    []string        `json:"members,omitempty"`
+	Visibility GroupVisibility `json:"visibility,omitempty"`
 }
 
 type UserConfig struct {
@@ -207,7 +208,7 @@ func (manager *UserManager) loadConfig() (err error){
 		manager.users[user.Name] = user
 	}
 	for _, groupConfig := range config.Groups{
-		var group = UserGroup{Name:groupConfig.Name, Display:groupConfig.Display}
+		var group = UserGroup{Name:groupConfig.Name, Display:groupConfig.Display, Visibility: groupConfig.Visibility}
 		group.Roles = map[string]bool{}
 		group.Members = map[string]bool{}
 		for _, roleName := range groupConfig.Role{
@@ -243,7 +244,7 @@ func (manager *UserManager) saveConfig() (err error){
 		config.Roles = append(config.Roles, role)
 	}
 	for _, group := range manager.groups{
-		var groupConfig = GroupConfig{Name:group.Name, Display:group.Display}
+		var groupConfig = GroupConfig{Name:group.Name, Display:group.Display, Visibility:group.Visibility}
 		for roleName, _ := range group.Roles{
 			groupConfig.Role = append(groupConfig.Role, roleName)
 		}
@@ -407,6 +408,10 @@ func (manager *UserManager) handleCommand(cmd userCMD){
 		err = manager.handleSearchUsers(cmd.Group, cmd.ResultChan)
 	case cmdIsInitialed:
 		err = manager.handleIsInitialed(cmd.ErrorChan)
+	case cmdUpdateVisibility:
+		err = manager.handleUpdateVisibility(cmd.Group, cmd.Visibility, cmd.ErrorChan)
+	case cmdGetVisibility:
+		err = manager.handleGetVisibility(cmd.Group, cmd.ResultChan)
 	default:
 		log.Printf("<user> unsupport command type %d", cmd.Type)
 		return 
