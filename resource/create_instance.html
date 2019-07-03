@@ -278,7 +278,7 @@ function loadOptions(){
 
     M.FormSelect.init($('#version-options'));
   });
-  var queryImage = '/disk_image_search/?user=' + N.GetCurrentUser() + '&group=' + N.GetCurrentGroup();
+  var queryImage = '/disk_image_search/?session=' + N.GetSessionID();
   $.getJSON(queryImage, function(result){
     if (0 != result['error_code']) {
         M.toast({html: 'query disk images fail:' + result['message']});

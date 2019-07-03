@@ -556,6 +556,15 @@ N.GetCurrentGroup = function(){
   return session.group;
 }
 
+N.GetSessionID = function(){
+  var sessionString = localStorage.getItem(N._session_tag);
+  if (!sessionString || 0 == sessionString.length){
+    return null;
+  }
+  var session = JSON.parse(sessionString);
+  return session.id;
+}
+
 N.WriteOperateLog = function(operate){
   var sessionString = localStorage.getItem(N._session_tag);
   if (!sessionString || 0 == sessionString.length){
@@ -899,8 +908,8 @@ N.CreateMenuAndFooter = function(userName, menuList){
       $('<span>').addClass('lever')
     ).append('中文');
 
-  const version = '0.9.1';
-  var rightText = 'Project Nano ' + version + ' ©2018-2019 ';
+  const version = '1.0.0';
+  var rightText = 'Project Nano ' + version + ' © 2018~2019 ';
 
   var rightContent = $('<div>').addClass('col m6 s12');
   var manualLink = $('<a>').addClass('white-text').attr('href', 'https://nanocloud.readthedocs.io/projects/guide/zh_CN/latest/').attr('target', '_blank');
