@@ -74,21 +74,31 @@
                 </div>
               </div>
               <div class="row">
-                <div class="input-field" id="system-disk-options">
+                <div class="input-field">
                   <div class="col m2">
                     <label id="system-disk-label"></label>
+                  </div>
+                  <div class="col m4 range-field">
+                    <input type="range" id="system-disk" onchange="onSystemDiskChanged()">
+                  </div>
+                  <div class="col m2">
+                    <label>
+                      <span id="system-disk-tip"></span>
+                    </label>
                   </div>
                 </div>
               </div>
               <div class="row">
-                <div class="input-field" id="data-disk-options">
+                <div class="input-field">
                   <div class="col m2">
                     <label id="data-disk-label"></label>
                   </div>
-                  <div class="col m1">
+                  <div class="col m4 range-field">
+                    <input type="range" id="data-disk" onchange="onDataDiskChanged()">
+                  </div>
+                  <div class="col m2">
                     <label>
-                      <input class="with-gap" name="data_disk" type="radio" value="0"/>
-                      <span>None</span>
+                      <span id="data-disk-tip"></span>
                     </label>
                   </div>
                 </div>
@@ -171,6 +181,24 @@ function mapValue(sizeInMB){
     return {Label: sizeInGB + 'G', Value: size};
   }else{
     return {Label: sizeInMB + 'M', Value: size};
+  }
+}
+
+function onSystemDiskChanged(){
+  var currentValue = $('#system-disk').val();
+  $('#system-disk-tip').text(currentValue + ' GiB');
+}
+
+function onDataDiskChanged(){
+  var currentValue = $('#data-disk').val();
+  if(0 == currentValue){
+    if(N.IsChinese()){
+      $('#data-disk-tip').text('不使用');
+    }else{
+      $('#data-disk-tip').text("Don't use");
+    }
+  }else {
+    $('#data-disk-tip').text(currentValue + ' GiB');
   }
 }
 
@@ -290,49 +318,64 @@ function loadOptions(){
       );
     });
   }
+  //
+  // {
+  //   //system disk
+  //   var diskData = [5*1024, 10*1024, 20*1024];
+  //   var option = $('#system-disk-options');
+  //   diskData.forEach((disk)=>{
+  //     var tag = mapValue(disk);
+  //     var input = $('<input>').addClass('with-gap').attr('name', 'system_disk').attr('type', 'radio').val(tag.Value);
+  //     if(5*1024 == disk){
+  //       input.prop('checked', true);
+  //     }
+  //     option.append(
+  //       $('<div>').addClass('col m1').append(
+  //         $('<label>').append(
+  //           input
+  //         ).append(
+  //           $('<span>').text(tag.Label)
+  //         )
+  //       )
+  //     );
+  //   });
+  // }
+  //
+  // {
+  //   //data disk
+  //   var diskData = [1024, 2*1024, 4*1024, 8*1024];
+  //   var option = $('#data-disk-options');
+  //   diskData.forEach((disk)=>{
+  //     var tag = mapValue(disk);
+  //     var input = $('<input>').addClass('with-gap').attr('name', 'data_disk').attr('type', 'radio').val(tag.Value);
+  //     if(1024 == disk){
+  //       input.prop('checked', true);
+  //     }
+  //     option.append(
+  //       $('<div>').addClass('col m1').append(
+  //         $('<label>').append(
+  //           input
+  //         ).append(
+  //           $('<span>').text(tag.Label)
+  //         )
+  //       )
+  //     );
+  //   });
+  // }
 
   {
     //system disk
-    var diskData = [5*1024, 10*1024, 20*1024];
-    var option = $('#system-disk-options');
-    diskData.forEach((disk)=>{
-      var tag = mapValue(disk);
-      var input = $('<input>').addClass('with-gap').attr('name', 'system_disk').attr('type', 'radio').val(tag.Value);
-      if(5*1024 == disk){
-        input.prop('checked', true);
-      }
-      option.append(
-        $('<div>').addClass('col m1').append(
-          $('<label>').append(
-            input
-          ).append(
-            $('<span>').text(tag.Label)
-          )
-        )
-      );
-    });
+    const minSize = 5, maxSize = 60, moveStep = 1, defaultSize = minSize;
+    $('#system-disk').attr('min', minSize).attr('max', maxSize)
+      .attr('value', defaultSize).attr('step', moveStep);
+    onSystemDiskChanged();
   }
-
   {
     //data disk
-    var diskData = [1024, 2*1024, 4*1024, 8*1024];
-    var option = $('#data-disk-options');
-    diskData.forEach((disk)=>{
-      var tag = mapValue(disk);
-      var input = $('<input>').addClass('with-gap').attr('name', 'data_disk').attr('type', 'radio').val(tag.Value);
-      if(1024 == disk){
-        input.prop('checked', true);
-      }
-      option.append(
-        $('<div>').addClass('col m1').append(
-          $('<label>').append(
-            input
-          ).append(
-            $('<span>').text(tag.Label)
-          )
-        )
-      );
-    });
+    const minSize = 0, maxSize = 20, moveStep = 2, defaultSize = minSize;
+    $('#data-disk').attr('min', minSize).attr('max', maxSize)
+      .attr('value', defaultSize).attr('step', moveStep);
+    onDataDiskChanged();
   }
 
   $.getJSON("/compute_pools/", function(result){
@@ -784,8 +827,12 @@ function submitCreateRequest() {
 
     var info = versions.get(currentVersion);
     request.system = info.System;
+
+
+    const GiB = 1 << 30;
     request.disks = new Array();
-    request.disks.push(Number($('input[name=system_disk]:checked').val()));
+    var systemDisk = Number($('#system-disk').val()) * GiB;
+    request.disks.push(systemDisk);
     var sourceImage = $('#image-options').val();
     if ('' != sourceImage){
       request.from_image = sourceImage;
@@ -802,7 +849,7 @@ function submitCreateRequest() {
         request.cloud_init = ciConfig;
       }
     }
-    var dataDisk = Number($('input[name=data_disk]:checked').val());
+    var dataDisk = Number($('#data-disk').val()) * GiB;
     if (0 != dataDisk){
       request.disks.push(dataDisk);
     }
