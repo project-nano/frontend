@@ -107,6 +107,62 @@
                             </select>
                         </div>
                     </div>
+                    <!-- CPU Priority -->
+                    <div class="row">
+                        <div class="input-field" id="prioirty-options">
+                            <div class="col m2">
+                                <label id="prioirty-label"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- IOPS -->
+                    <div class="row">
+                        <div class="input-field">
+                            <div class="col m2">
+                                <label id="iops-label"></label>
+                            </div>
+                            <div class="col m4 range-field">
+                              <input type="range" id="iops" onchange="onIOPSChanged()">
+                            </div>
+                            <div class="col m2">
+                              <label>
+                                <span id="iops-tip"></span>
+                              </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- inbound -->
+                    <div class="row">
+                        <div class="input-field">
+                            <div class="col m2">
+                                <label id="inbound-label"></label>
+                            </div>
+                            <div class="col m3 range-field">
+                              <input type="range" id="inbound" onchange="onInboundChanged()">
+                            </div>
+                            <div class="col m2">
+                              <label>
+                                <span id="inbound-tip"></span>
+                              </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- outbound -->
+                    <div class="row">
+                        <div class="input-field">
+                            <div class="col m2">
+                                <label id="outbound-label"></label>
+                            </div>
+                            <div class="col m3 range-field">
+                              <input type="range" id="outbound" onchange="onOutboundChanged()">
+                            </div>
+                            <div class="col m2">
+                              <label>
+                                <span id="outbound-tip"></span>
+                              </label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="modal" id="confirm_modal">
                         <!--hide model -->
                         <div class="modal-content">
@@ -185,7 +241,60 @@ function onDataDiskChanged(){
   }
 }
 
+function onIOPSChanged(){
+  var currentValue = $('#iops').val();
+  if(0 == currentValue){
+    if(N.IsChinese()){
+      $('#iops-tip').text('无限制');
+    }else{
+      $('#iops-tip').text("No limit");
+    }
+  }else {
+    $('#iops-tip').text(currentValue + ' IOPS');
+  }
+}
+
+function onInboundChanged(){
+  var currentValue = $('#inbound').val();
+  if(0 == currentValue){
+    if(N.IsChinese()){
+      $('#inbound-tip').text('无限制');
+    }else{
+      $('#inbound-tip').text("No limit");
+    }
+  }else {
+    $('#inbound-tip').text(currentValue + ' Mbit/s');
+  }
+}
+
+function onOutboundChanged(){
+  var currentValue = $('#outbound').val();
+  if(0 == currentValue){
+    if(N.IsChinese()){
+      $('#outbound-tip').text('无限制');
+    }else{
+      $('#outbound-tip').text("No limit");
+    }
+  }else {
+    $('#outbound-tip').text(currentValue + ' Mbit/s');
+  }
+}
+
 function loadOptions(){
+  {
+    //labels
+    if(N.IsChinese()){
+      $('#prioirty-label').text('CPU优先级');
+      $('#iops-label').text('IOPS');
+      $('#inbound-label').text('下行带宽');
+      $('#outbound-label').text('上行带宽');
+    }else{
+      $('#prioirty-label').text('CPU Priority');
+      $('#iops-label').text('IOPS');
+      $('#inbound-label').text('Inbound Bandwidth');
+      $('#outbound-label').text('Outbound Bandwidth');
+    }
+  }
   {
     //cores
     var coreData = [1, 2, 4, 8];
@@ -243,6 +352,63 @@ function loadOptions(){
     onDataDiskChanged();
   }
 
+  {
+    //prioirty
+    var prioirtyData;
+    if(N.IsChinese()){
+      prioirtyData = [
+        ["high", "高", false],
+        ["medium", "中", true],
+        ["low", "低", false]
+      ];
+    }else{
+      prioirtyData = [
+        ["high", "High", false],
+        ["medium", "Medium", true],
+        ["low", "Low", false]
+      ];
+    }
+    var option = $('#prioirty-options');
+    prioirtyData.forEach((data)=>{
+      var value = data[0];
+      var label = data[1];
+      var isChecked = data[2];
+      var input = $('<input>').addClass('with-gap').attr('name', 'prioirty').attr('type', 'radio').val(value);
+      if(isChecked){
+        input.prop('checked', true);
+      }
+      option.append(
+        $('<div>').addClass('col m2').append(
+          $('<label>').append(
+            input
+          ).append(
+            $('<span>').text(label)
+          )
+        )
+      );
+    });
+  }
+  {
+    //iops
+    const minSize = 0, maxSize = 2000, moveStep = 10, defaultSize = minSize;
+    $('#iops').attr('min', minSize).attr('max', maxSize)
+      .attr('value', defaultSize).attr('step', moveStep);
+    onIOPSChanged();
+  }
+  {
+    //inbound
+    const minSize = 0, maxSize = 20, moveStep = 1, defaultSize = minSize;
+    $('#inbound').attr('min', minSize).attr('max', maxSize)
+      .attr('value', defaultSize).attr('step', moveStep);
+    onInboundChanged();
+  }
+  {
+    //outsbound
+    const minSize = 0, maxSize = 20, moveStep = 1, defaultSize = minSize;
+    $('#outbound').attr('min', minSize).attr('max', maxSize)
+      .attr('value', defaultSize).attr('step', moveStep);
+    onOutboundChanged();
+  }
   $.getJSON("/compute_pools/", function(result){
     if (0 != result['error_code']) {
         M.toast({html: 'query compute pools fail:' + result['message']});
