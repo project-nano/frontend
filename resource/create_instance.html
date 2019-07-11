@@ -109,9 +109,9 @@
                     </div>
                     <!-- CPU Priority -->
                     <div class="row">
-                        <div class="input-field" id="prioirty-options">
+                        <div class="input-field" id="priority-options">
                             <div class="col m2">
-                                <label id="prioirty-label"></label>
+                                <label id="priority-label"></label>
                             </div>
                         </div>
                     </div>
@@ -284,12 +284,12 @@ function loadOptions(){
   {
     //labels
     if(N.IsChinese()){
-      $('#prioirty-label').text('CPU优先级');
+      $('#priority-label').text('CPU优先级');
       $('#iops-label').text('IOPS');
       $('#inbound-label').text('下行带宽');
       $('#outbound-label').text('上行带宽');
     }else{
-      $('#prioirty-label').text('CPU Priority');
+      $('#priority-label').text('CPU Priority');
       $('#iops-label').text('IOPS');
       $('#inbound-label').text('Inbound Bandwidth');
       $('#outbound-label').text('Outbound Bandwidth');
@@ -353,27 +353,27 @@ function loadOptions(){
   }
 
   {
-    //prioirty
-    var prioirtyData;
+    //priority
+    var priorityData;
     if(N.IsChinese()){
-      prioirtyData = [
+      priorityData = [
         ["high", "高", false],
         ["medium", "中", true],
         ["low", "低", false]
       ];
     }else{
-      prioirtyData = [
+      priorityData = [
         ["high", "High", false],
         ["medium", "Medium", true],
         ["low", "Low", false]
       ];
     }
-    var option = $('#prioirty-options');
-    prioirtyData.forEach((data)=>{
+    var option = $('#priority-options');
+    priorityData.forEach((data)=>{
       var value = data[0];
       var label = data[1];
       var isChecked = data[2];
-      var input = $('<input>').addClass('with-gap').attr('name', 'prioirty').attr('type', 'radio').val(value);
+      var input = $('<input>').addClass('with-gap').attr('name', 'priority').attr('type', 'radio').val(value);
       if(isChecked){
         input.prop('checked', true);
       }
@@ -870,6 +870,26 @@ function submitConfig() {
       request.auto_start = true;
     }else{
       request.auto_start = false;
+    }
+    {
+      var qos = new Object();
+      qos.cpu_priority = $('input[name=priority]:checked').val();
+      var iops = Number($('#iops').val());
+      if(0 != iops){
+          qos.write_iops = qos.read_iops = iops;
+      }
+      const mps = 1 << (20 - 3);
+      var inbound = Number($('#inbound').val());
+      if(0 != inbound){
+        //trans to byte
+        qos.receive_speed = inbound * mps;
+      }
+      var outbound = Number($('#outbound').val());
+      if(0 != outbound){
+        //trans to byte
+        qos.send_speed = outbound * mps;
+      }
+      request.qos = qos;
     }
     createGuest(request);
 }
