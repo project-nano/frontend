@@ -1,12 +1,14 @@
 # Change Log
 
-## [1.0.0] - 2019-07-02
+## [1.0.0] - 2019-07-14
 
 ### Added
 
-- Modify CPU priority
+- Create guests with QoS options
 
-- Set threshold of Disk/Network IO
+- Modify CPU priority in guest detail
+
+- Set threshold of Disk/Network IO in guest detail
 
 - Batch stop guests
 
