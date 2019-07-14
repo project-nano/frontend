@@ -1001,16 +1001,30 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	var remoteAddress string
+	remoteAddress, err = getRemoteIP(r)
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	{
 		//verify
 		var respChan = make(chan error, 1)
 		service.userManager.VerifyUserPassword(requestData.User, requestData.Password, respChan)
 		err = <- respChan
 		if err != nil{
+			{
+				var respChan = make(chan error, 1)
+				//record login fail
+				var log = fmt.Sprintf("warning: failed login from %s", remoteAddress)
+				service.logManager.AddLog(log, respChan)
+				<- respChan
+			}
 			ResponseFail(DefaultServerError, err.Error(), w)
 			return
 		}
 	}
+
 	var user LoginUser
 	{
 		var respChan = make(chan UserResult, 1)
@@ -1023,12 +1037,7 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 		user = result.User
 	}
 	{
-		var remoteAddress string
-		remoteAddress, err = getRemoteIP(r)
-		if err != nil{
-			ResponseFail(DefaultServerError, err.Error(), w)
-			return
-		}
+
 		//allocate
 		var respChan = make(chan SessionResult, 1)
 		service.sessionManager.AllocateSession(user.Name, user.Group, requestData.Nonce, remoteAddress,  user.Menu, respChan)

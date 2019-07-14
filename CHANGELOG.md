@@ -14,6 +14,8 @@
 
 - Enable get/update group visibility
 
+- Record failed login
+
 ### Changed
 
 - URL of guest operates change from '/guest/' to '/guests/'.
