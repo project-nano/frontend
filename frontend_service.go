@@ -1,40 +1,40 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/julienschmidt/httprouter"
 	"github.com/project-nano/framework"
+	"io"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
-	"context"
-	"log"
 	"net/http/httputil"
-	"github.com/julienschmidt/httprouter"
-	"fmt"
 	"net/url"
-	"io"
-	"encoding/json"
 	"path/filepath"
-	"io/ioutil"
 	"sort"
-	"time"
 	"strconv"
 	"strings"
-	"github.com/pkg/errors"
+	"time"
 )
 
 type FrontEndService struct {
-	serviceListener net.Listener
-	frontendServer  http.Server
-	listenAddress   string
-	backendHost     string
-	backendURL      string
-	reverseProxy    *httputil.ReverseProxy
-	channelManager  *ChannelManager
-	sessionManager  *SessionManager
-	userManager     *UserManager
-	logManager      *LogManager
-	userInitialed   bool
-	fileHandler     http.Handler
-	runner          *framework.SimpleRunner
+	serviceListener        net.Listener
+	frontendServer         http.Server
+	listenAddress          string
+	backendHost            string
+	backendURL             string
+	reverseProxy           *httputil.ReverseProxy
+	channelManager         *ChannelManager
+	sessionManager         *SessionManager
+	userManager            *UserManager
+	logManager             *LogManager
+	userInitialed          bool
+	fileHandler            http.Handler
+	sortedSignatureHeaders []string
+	runner                 *framework.SimpleRunner
 }
 
 type Proxy struct {
@@ -42,7 +42,15 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion = "1.0.0"
+	CurrentVersion          = "1.1.0"
+	HeaderNameHost          = "Host"
+	HeaderNameContentType   = "Content-Type"
+	HeaderNameSession       = "Nano-Session"
+	HeaderNameDate          = "Nano-Date"
+	HeaderNameScope         = "Nano-Scope"
+	HeaderNameAuthorization = "Nano-Authorization"
+	APIRoot                 = "/api/"
+	APIVersion              = 1
 )
 
 
@@ -106,6 +114,14 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 	}
 	service.userInitialed = service.userManager.IsUserAvailable()
 	service.fileHandler = http.FileServer(http.Dir(resourcePath))
+	service.sortedSignatureHeaders = []string{
+		HeaderNameHost,
+		HeaderNameContentType,
+		HeaderNameSession,
+		HeaderNameDate,
+		HeaderNameScope,
+	}
+	sort.Reverse(sort.StringSlice(service.sortedSignatureHeaders))
 	return
 }
 
@@ -324,7 +340,9 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.GET("/media_image_search/*filepath", service.searchMediaImages)
 	router.GET("/disk_image_search/*filepath", service.searchDiskImages)
 }
-
+func (service *FrontEndService) apiPath(path string) string{
+	return fmt.Sprintf("%s/v%d%s", APIRoot, APIVersion, path)
+}
 func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	const(
 		DefaultURL = "/login.html"
@@ -335,6 +353,47 @@ func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *htt
 func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
+}
+func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
+	var canonicalRequest, stringToSign, signKey, signature string
+	{
+		//canonicalRequest
+		var canonicalURI = url.QueryEscape(url.QueryEscape(r.URL.Path))
+		var canonicalQueryString string
+		if 0 != len(r.URL.Query()){
+			var paramNames []string
+			for key := range r.URL.Query(){
+				paramNames = append(paramNames, key)
+			}
+			sort.Sort(sort.StringSlice(paramNames))
+			var queryParams []string
+			for _, name := range paramNames{
+				queryParams = append(queryParams,
+					fmt.Sprintf("%s=%s", url.QueryEscape(name), url.QueryEscape(r.URL.Query().Get(name))))
+			}
+			canonicalQueryString = strings.Join(queryParams, "&")
+		}else{
+			canonicalQueryString = ""
+		}
+		var canonicalHeaders string
+		var headersBuilder strings.Builder
+		var lowerHeaders []string
+		for _, headerName := range service.sortedSignatureHeaders{
+			var headerValue = r.Header.Get(headerName)
+			if 0 == len(headerValue){
+				err = fmt.Errorf("heade %s required", headerName)
+				return
+			}
+			if _, err = headersBuilder.WriteString(fmt.Sprintf("%s:%s\n",
+				strings.ToLower(headerName), strings.Trim(headerValue, " "))); err != nil{
+				return
+			}
+			lowerHeaders = append(lowerHeaders, strings.ToLower(headerName))
+		}
+		var signedHeaders = strings.Join(lowerHeaders, ";")
+	}
+
+	panic("not implement")
 }
 
 func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Request, params httprouter.Params){
