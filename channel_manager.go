@@ -132,17 +132,13 @@ func (manager *ChannelManager)handleCommand(cmd channelCommand) {
 	}
 }
 
-func (manager *ChannelManager)handleCreateChannel(address, secret string, respChan chan ChannelResult) error{
+func (manager *ChannelManager)handleCreateChannel(address, secret string, respChan chan ChannelResult) (err error){
 	const (
 		ChannelTimeout = 15*time.Second
 		DefaultProtocol = "vnc"
 	)
-	newID, err := uuid.NewV4()
-	if err != nil{
-		log.Printf("<channel> generate channel id fail: %s", err.Error())
-		respChan <- ChannelResult{Error:err}
-		return err
-	}
+	var newID = uuid.NewV4()
+
 	var channelID = newID.String()
 	if _, exists := manager.channels[channelID];exists{
 		err = fmt.Errorf("channel '%s' already exists", channelID)

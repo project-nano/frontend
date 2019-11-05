@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.1.0] - 2019-11-05
+
+### Added 
+
+- Add signature when call Core API
+- Add go mod
+
+### Changed
+
+- Call core API via prefix '/api/v1/'
+
 ## [1.0.0] - 2019-07-14
 
 ### Added

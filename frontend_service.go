@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/project-nano/framework"
@@ -34,6 +39,8 @@ type FrontEndService struct {
 	userInitialed          bool
 	fileHandler            http.Handler
 	sortedSignatureHeaders []string
+	apiID                  string
+	apiKey                 string
 	runner                 *framework.SimpleRunner
 }
 
@@ -69,8 +76,17 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 	if err != nil {
 		return
 	}
-
+	if 0 == len(config.APIID){
+		err = errors.New("API ID required")
+		return
+	}
+	if 0 == len(config.APIKey){
+		err = errors.New("API Key required")
+		return
+	}
 	service = &FrontEndService{}
+	service.apiID = config.APIID
+	service.apiKey = config.APIKey
 	service.listenAddress = fmt.Sprintf("%s:%d", config.ListenAddress, config.ListenPort)
 	service.serviceListener, err = net.Listen("tcp", service.listenAddress)
 	if err != nil{
@@ -184,7 +200,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	)
 
 	var redirect = func(r *httprouter.Router, path string, method string) {
-		r.Handle(method, path, service.redirectToBackend)
+		r.Handle(method, service.apiPath(path), service.redirectToBackend)
 	}
 
 	//API
@@ -351,11 +367,48 @@ func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *htt
 }
 
 func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	//check session
+	var err error
+	var sessionID = r.Header.Get(HeaderNameSession)
+	if 0 == len(sessionID){
+		err = errors.New("unauthenticated request")
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	var resp = make(chan SessionResult, 1)
+	service.sessionManager.GetSession(sessionID, resp)
+	var result = <- resp
+	if result.Error != nil{
+		err = result.Error
+		log.Printf("<frontend> get session fail: %s", err.Error())
+		err = errors.New("invalid session")
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	if err = service.signatureRequest(r); err != nil{
+		err = fmt.Errorf("signature api fail: %s", err.Error())
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
 }
 func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
-	var canonicalRequest, stringToSign, signKey, signature string
+	const (
+		defaultScope    = "/default"
+		signatureMethod = "Nano-HMAC-SHA256"
+	)
+
+	var canonicalRequest, stringToSign, signature string
+	var signedHeaders, signatureScope string
+	var signKey []byte
+	var query = r.URL.Query()
+	var now = time.Now()
+	var currentDate = now.Format("20060102")
+	query.Add(HeaderNameDate, now.Format(time.RFC3339))
+	var requestScope = defaultScope
+	query.Add(HeaderNameScope, requestScope)
+	r.URL.RawQuery = query.Encode()
 	{
 		//canonicalRequest
 		var canonicalURI = url.QueryEscape(url.QueryEscape(r.URL.Path))
@@ -390,10 +443,73 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 			}
 			lowerHeaders = append(lowerHeaders, strings.ToLower(headerName))
 		}
-		var signedHeaders = strings.Join(lowerHeaders, ";")
+		signedHeaders = strings.Join(lowerHeaders, ";")
+		//hash with sha256
+		var hash = sha256.New()
+		if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
+			hash.Write([]byte(""))
+		}else {
+			//clone request payload
+			var payload []byte
+			if payload, err = ioutil.ReadAll(r.Body); err != nil{
+				return
+			}
+			hash.Write(payload)
+			r.Body = ioutil.NopCloser(bytes.NewBuffer(payload))
+		}
+		var hashedPayload = strings.ToLower(hex.EncodeToString(hash.Sum(nil)))
+		var canonicalRequestContent = strings.Join([]string{
+			canonicalURI,
+			canonicalQueryString,
+			canonicalHeaders,
+			signedHeaders,
+			hashedPayload,
+		}, "\n")
+		hash.Reset()
+		hash.Write([]byte(canonicalRequestContent))
+		canonicalRequest = hex.EncodeToString(hash.Sum(nil))
+	}
+	{
+		signatureScope = fmt.Sprintf("%s%s/nano_request",
+			currentDate, requestScope)
+		stringToSign = strings.Join([]string{
+			signatureMethod,
+			now.Format(time.RFC3339),
+			signatureScope,
+			canonicalRequest,
+		}, "\n")
+	}
+	{
+		var builder strings.Builder
+		builder.WriteString("nano")
+		builder.WriteString(service.apiKey)
+
+		var key = []byte(builder.String())
+		var data = []byte(signatureScope)
+		if signKey, err = computeHMACSha256(key, data); err != nil{
+			return
+		}
+		var hmacSignature []byte
+		if hmacSignature, err = computeHMACSha256(signKey, []byte(stringToSign)); err != nil{
+			return
+		}
+		signature = hex.EncodeToString(hmacSignature)
 	}
 
-	panic("not implement")
+	var authorization = fmt.Sprintf("%s Credential=%s/%s, SignedHeaders=%s, Signature=%s",
+		signatureMethod, service.apiID, signatureScope, signedHeaders, signature)
+	query.Add(HeaderNameAuthorization, authorization)
+	r.URL.RawQuery = query.Encode()
+	return nil
+}
+
+func computeHMACSha256(key, data []byte) (hash []byte, err error){
+	var h = hmac.New(sha256.New, key)
+	if _, err = h.Write(data); err != nil{
+		return
+	}
+	hash = h.Sum(nil)
+	return
 }
 
 func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Request, params httprouter.Params){

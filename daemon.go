@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"errors"
-	"os"
 	"encoding/json"
-	"path/filepath"
-	"io/ioutil"
+	"errors"
+	"fmt"
 	"github.com/project-nano/framework"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 type FrontEndConfig struct {
@@ -15,6 +15,8 @@ type FrontEndConfig struct {
 	ListenPort    int    `json:"port"`
 	ServiceHost   string `json:"service_host"`
 	ServicePort   int    `json:"service_port"`
+	APIKey        string `json:"api_key"`
+	APIID         string `json:"api_id"`
 }
 
 type MainService struct {

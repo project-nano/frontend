@@ -132,10 +132,7 @@ func (manager *SessionManager) handleCommand(cmd sessionCMD) {
 func (manager *SessionManager) handleAllocateSession(user, group, nonce, address string, menu []string, resp chan SessionResult) (err error) {
 
 	var session = LoggedSession{}
-	UID, err := uuid.NewV4()
-	if err != nil{
-		return
-	}
+	var UID = uuid.NewV4()
 	session.ID = UID.String()
 	session.User = user
 	session.Group = group
