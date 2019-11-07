@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -56,7 +57,7 @@ const (
 	HeaderNameDate          = "Nano-Date"
 	HeaderNameScope         = "Nano-Scope"
 	HeaderNameAuthorization = "Nano-Authorization"
-	APIRoot                 = "/api/"
+	APIRoot                 = "/api"
 	APIVersion              = 1
 )
 
@@ -77,10 +78,28 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 		return
 	}
 	if 0 == len(config.APIID){
-		err = errors.New("API ID required")
-		return
-	}
-	if 0 == len(config.APIKey){
+		const (
+			dummyID  = "dummyID"
+			dummyKey = "ThisIsAKeyPlaceHolder_ChangeToYourContent"
+		)
+		config.APIID = dummyID
+		config.APIKey = dummyKey
+		if data, err = json.MarshalIndent(config, "", " "); err != nil{
+			err = fmt.Errorf("marshal new config fail: %s", err.Error())
+			return
+		}
+		var file *os.File
+		if file, err = os.Create(configFile); err != nil{
+			err = fmt.Errorf("create new config fail: %s", err.Error())
+			return
+		}
+		defer file.Close()
+		if _, err = file.Write(data); err != nil{
+			err = fmt.Errorf("write new config fail: %s", err.Error())
+			return
+		}
+		log.Printf("<api> warning: dummy API credential '%s' created", dummyID)
+	}else if 0 == len(config.APIKey){
 		err = errors.New("API Key required")
 		return
 	}
@@ -385,12 +404,12 @@ func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	r.Host = service.backendHost
 	if err = service.signatureRequest(r); err != nil{
 		err = fmt.Errorf("signature api fail: %s", err.Error())
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
-	r.Host = service.backendHost
 	service.reverseProxy.ServeHTTP(w, r)
 }
 func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
@@ -399,16 +418,16 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		signatureMethod = "Nano-HMAC-SHA256"
 	)
 
-	var canonicalRequest, stringToSign, signature string
-	var signedHeaders, signatureScope string
+	var canonicalRequest, stringToSign, signedHeaders, requestScope, signature string
 	var signKey []byte
-	var query = r.URL.Query()
 	var now = time.Now()
 	var currentDate = now.Format("20060102")
-	query.Add(HeaderNameDate, now.Format(time.RFC3339))
-	var requestScope = defaultScope
-	query.Add(HeaderNameScope, requestScope)
-	r.URL.RawQuery = query.Encode()
+	requestScope = fmt.Sprintf("%s%s/nano_request",
+		currentDate, defaultScope)
+
+	r.Header.Set(HeaderNameScope, requestScope)
+	r.Header.Set(HeaderNameDate, now.Format(time.RFC3339))
+	r.Header.Set(HeaderNameHost, r.Host)
 	{
 		//canonicalRequest
 		var canonicalURI = url.QueryEscape(url.QueryEscape(r.URL.Path))
@@ -431,10 +450,18 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		var canonicalHeaders string
 		var headersBuilder strings.Builder
 		var lowerHeaders []string
+		var hasBody = true
+		if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
+			hasBody = false
+		}
 		for _, headerName := range service.sortedSignatureHeaders{
+			if !hasBody && HeaderNameContentType == headerName{
+				//ignore content type when no body available
+				continue
+			}
 			var headerValue = r.Header.Get(headerName)
 			if 0 == len(headerValue){
-				err = fmt.Errorf("heade %s required", headerName)
+				err = fmt.Errorf("header '%s' required", headerName)
 				return
 			}
 			if _, err = headersBuilder.WriteString(fmt.Sprintf("%s:%s\n",
@@ -443,10 +470,11 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 			}
 			lowerHeaders = append(lowerHeaders, strings.ToLower(headerName))
 		}
+		canonicalHeaders = headersBuilder.String()
 		signedHeaders = strings.Join(lowerHeaders, ";")
 		//hash with sha256
 		var hash = sha256.New()
-		if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
+		if !hasBody{
 			hash.Write([]byte(""))
 		}else {
 			//clone request payload
@@ -470,12 +498,11 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		canonicalRequest = hex.EncodeToString(hash.Sum(nil))
 	}
 	{
-		signatureScope = fmt.Sprintf("%s%s/nano_request",
-			currentDate, requestScope)
+
 		stringToSign = strings.Join([]string{
 			signatureMethod,
 			now.Format(time.RFC3339),
-			signatureScope,
+			requestScope,
 			canonicalRequest,
 		}, "\n")
 	}
@@ -485,7 +512,7 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		builder.WriteString(service.apiKey)
 
 		var key = []byte(builder.String())
-		var data = []byte(signatureScope)
+		var data = []byte(requestScope)
 		if signKey, err = computeHMACSha256(key, data); err != nil{
 			return
 		}
@@ -495,11 +522,10 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		}
 		signature = hex.EncodeToString(hmacSignature)
 	}
-
 	var authorization = fmt.Sprintf("%s Credential=%s/%s, SignedHeaders=%s, Signature=%s",
-		signatureMethod, service.apiID, signatureScope, signedHeaders, signature)
-	query.Add(HeaderNameAuthorization, authorization)
-	r.URL.RawQuery = query.Encode()
+		signatureMethod, service.apiID, requestScope, signedHeaders, signature)
+
+	r.Header.Set(HeaderNameAuthorization, authorization)
 	return nil
 }
 
