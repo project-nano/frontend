@@ -289,14 +289,14 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/media_images/:id", GET)
 	redirect(router, "/media_images/:id", DELETE)
 	redirect(router, "/media_images/:id", PUT)//modify media image info
-	redirect(router, "/media_image_files/:id", POST)
+	redirect(router, "/media_images/:id/file/", POST)
 
 	redirect(router, "/disk_images/", POST)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
 	redirect(router, "/disk_images/:id", PUT) //modify disk image info
-	redirect(router, "/disk_image_files/:id", GET)
-	redirect(router, "/disk_image_files/:id", POST)
+	redirect(router, "/disk_images/:id/file/", GET)
+	redirect(router, "/disk_images/:id/file/", POST)
 
 	redirect(router, "/instances/:id/media", POST)
 	redirect(router, "/instances/:id/media", DELETE)

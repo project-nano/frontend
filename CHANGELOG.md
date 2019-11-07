@@ -10,6 +10,8 @@
 ### Changed
 
 - Call core API via prefix '/api/v1/'
+- Change "/media_image_files/:id" to "/media_images/:id/file/"
+- Change "/disk_image_files/:id" to "/disk_images/:id/file/"
 
 ## [1.0.0] - 2019-07-14
 

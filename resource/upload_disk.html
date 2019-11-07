@@ -174,7 +174,7 @@ function createImage(name, description, tags){
 
 function startTransport(name, description, tags, imageId){
   var form = $('#upload_form');
-  form.attr('action', '/disk_image_files/' + imageId);
+  form.attr('action', '/disk_images/' + imageId + '/file/');
   form.ajaxForm({
     beforeSend: function(){
       $('#button').empty();
