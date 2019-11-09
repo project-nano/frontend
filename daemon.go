@@ -17,6 +17,7 @@ type FrontEndConfig struct {
 	ServicePort   int    `json:"service_port"`
 	APIKey        string `json:"api_key"`
 	APIID         string `json:"api_id"`
+	CORSEnable    bool   `json:"cors_enable,omitempty"`
 }
 
 type MainService struct {

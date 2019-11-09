@@ -42,6 +42,7 @@ type FrontEndService struct {
 	sortedSignatureHeaders []string
 	apiID                  string
 	apiKey                 string
+	corsEnable             bool
 	runner                 *framework.SimpleRunner
 }
 
@@ -63,7 +64,7 @@ const (
 
 
 func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request){
-	proxy.service.handleFileRequest(w, r)
+	proxy.service.handlePageRequest(w, r)
 }
 
 func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEndService, err error ) {
@@ -106,6 +107,7 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 	service = &FrontEndService{}
 	service.apiID = config.APIID
 	service.apiKey = config.APIKey
+	service.corsEnable = config.CORSEnable
 	service.listenAddress = fmt.Sprintf("%s:%d", config.ListenAddress, config.ListenPort)
 	service.serviceListener, err = net.Listen("tcp", service.listenAddress)
 	if err != nil{
@@ -157,6 +159,7 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 		HeaderNameScope,
 	}
 	sort.Reverse(sort.StringSlice(service.sortedSignatureHeaders))
+	log.Printf("<frontend> CORS %t", service.corsEnable)
 	return
 }
 
@@ -219,7 +222,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	)
 
 	var redirect = func(r *httprouter.Router, path string, method string) {
-		r.Handle(method, service.apiPath(path), service.redirectToBackend)
+		r.Handle(method, mapAPIPath(path), service.redirectToBackend)
 	}
 
 	//API
@@ -322,62 +325,159 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	//inner function
 
-	router.GET("/", service.defaultLandingPage)
-	router.GET("/initial.html", service.initialSystem)
-	router.GET("/monitor_channels/:id", service.handleEstablishChannel)
-	router.POST("/monitor_channels/", service.handleCreateChannel)
+	//router.GET(mapAPIPath("/"), service.defaultLandingPage)
+	//router.GET("/initial.html", service.initialSystem)
+
+
+	router.GET(mapAPIPath("/monitor_channels/:id"), service.handleEstablishChannel)
+	router.POST(mapAPIPath("/monitor_channels/"), service.handleCreateChannel)
 
 	//user roles
-	router.GET("/roles/", service.queryRoles)
-	router.GET("/roles/:role", service.getRole)
-	router.POST("/roles/:role", service.addRole)
-	router.PUT("/roles/:role", service.modifyRole)
-	router.DELETE("/roles/:role", service.removeRole)
+	router.GET(mapAPIPath("/roles/"), service.queryRoles)
+	router.GET(mapAPIPath("/roles/:role"), service.getRole)
+	router.POST(mapAPIPath("/roles/:role"), service.addRole)
+	router.PUT(mapAPIPath("/roles/:role"), service.modifyRole)
+	router.DELETE(mapAPIPath("/roles/:role"), service.removeRole)
 
 	//user groups
-	router.GET("/user_groups/", service.queryGroups)
-	router.GET("/user_groups/:group", service.getGroup)
-	router.POST("/user_groups/:group", service.addGroup)
-	router.PUT("/user_groups/:group", service.modifyGroup)
-	router.DELETE("/user_groups/:group", service.removeGroup)
+	router.GET(mapAPIPath("/user_groups/"), service.queryGroups)
+	router.GET(mapAPIPath("/user_groups/:group"), service.getGroup)
+	router.POST(mapAPIPath("/user_groups/:group"), service.addGroup)
+	router.PUT(mapAPIPath("/user_groups/:group"), service.modifyGroup)
+	router.DELETE(mapAPIPath("/user_groups/:group"), service.removeGroup)
 
-	router.GET("/user_groups/:group/members/", service.queryGroupMembers)
-	router.POST("/user_groups/:group/members/:user", service.addGroupMember)
-	router.DELETE("/user_groups/:group/members/:user", service.removeGroupMember)
+	router.GET(mapAPIPath("/user_groups/:group/members/"), service.queryGroupMembers)
+	router.POST(mapAPIPath("/user_groups/:group/members/:user"), service.addGroupMember)
+	router.DELETE(mapAPIPath("/user_groups/:group/members/:user"), service.removeGroupMember)
 
 	//users
-	router.GET("/users/", service.queryUsers)
-	router.GET("/users/:user", service.getUser)
-	router.POST("/users/:user", service.createUser)
-	router.PUT("/users/:user", service.modifyUser)
-	router.DELETE("/users/:user", service.deleteUser)
+	router.GET(mapAPIPath("/users/"), service.queryUsers)
+	router.GET(mapAPIPath("/users/:user"), service.getUser)
+	router.POST(mapAPIPath("/users/:user"), service.createUser)
+	router.PUT(mapAPIPath("/users/:user"), service.modifyUser)
+	router.DELETE(mapAPIPath("/users/:user"), service.deleteUser)
 
-	router.PUT("/users/:user/password/", service.modifyUserPassword)
+	router.PUT(mapAPIPath("/users/:user/password/"), service.modifyUserPassword)
 
-	router.GET("/user_search/*filepath", service.searchUsers)
+	router.GET(mapAPIPath("/user_search/*filepath"), service.searchUsers)
 
 	//sessions
-	router.GET("/sessions/", service.querySessions)
-	router.GET("/sessions/:session", service.getSession)
-	router.POST("/sessions/", service.createSession)
-	router.PUT("/sessions/:session", service.updateSession)
+	router.GET(mapAPIPath("/sessions/"), service.querySessions)
+	router.GET(mapAPIPath("/sessions/:session"), service.getSession)
+	router.POST(mapAPIPath("/sessions/"), service.createSession)
+	router.PUT(mapAPIPath("/sessions/:session"), service.updateSession)
 
 	//logs
-	router.GET("/logs/", service.queryLogs)
-	router.POST("/logs/", service.addLog)
-	router.DELETE("/logs/", service.removeLog)
+	router.GET(mapAPIPath("/logs/"), service.queryLogs)
+	router.POST(mapAPIPath("/logs/"), service.addLog)
+	router.DELETE(mapAPIPath("/logs/"), service.removeLog)
 
 	//visibility
-	router.GET("/resource_visibilities/:session", service.getVisibility)
-	router.PUT("/resource_visibilities/:session", service.updateVisibility)
+	router.GET(mapAPIPath("/resource_visibilities/:session"), service.getVisibility)
+	router.PUT(mapAPIPath("/resource_visibilities/:session"), service.updateVisibility)
 
-	router.GET("/guest_search/*filepath", service.searchGuests)
-	router.GET("/media_image_search/*filepath", service.searchMediaImages)
-	router.GET("/disk_image_search/*filepath", service.searchDiskImages)
+	router.GET(mapAPIPath("/guest_search/*filepath"), service.searchGuests)
+	router.GET(mapAPIPath("/media_image_search/*filepath"), service.searchMediaImages)
+	router.GET(mapAPIPath("/disk_image_search/*filepath"), service.searchDiskImages)
+
+	//OCRS
+	if service.corsEnable{
+		var paths = []string{
+			"/instances/:id",
+			"/guests/:id",
+			"/guests/",
+			"/guests/:id/cores",
+			"/guests/:id/memory",
+			"/guests/:id/system/",
+			"/guests/:id/qos/cpu",
+			"/guests/:id/qos/disk",
+			"/guests/:id/qos/network",
+			"/guests/:id/name/",
+			"/guests/:id/auth",
+			"/guests/:id/disks/resize/:index",
+			"/guests/:id/disks/shrink/:index",
+			"/compute_zone_status/",
+			"/compute_pool_status/",
+			"/compute_pool_status/:pool",
+			"/compute_cell_status/:pool",
+			"/compute_cell_status/:pool/:cell",
+			"/instance_status/:pool",
+			"/instance_status/:pool/:cell",
+			"/compute_pools/",
+			"/compute_pools/:pool",
+			"/compute_pool_cells/",
+			"/compute_pool_cells/:pool",
+			"/compute_pool_cells/:pool/:cell",
+			"/address_pools/",
+			"/address_pools/:pool",
+			"/address_pools/:pool/:type/ranges/",
+			"/address_pools/:pool/:type/ranges/:start",
+			"/storage_pools/",
+			"/storage_pools/:pool",
+			"/media_images/",
+			"/media_images/:id",
+			"/media_images/:id/file/",
+			"/disk_images/",
+			"/disk_images/:id",
+			"/disk_images/:id/file/",
+			"/instances/:id/media",
+			"/instances/:id/snapshots/",
+			"/instances/:id/snapshots/:name",
+			"/batch/create_guest/",
+			"/batch/create_guest/:id",
+			"/batch/delete_guest/",
+			"/batch/delete_guest/:id",
+			"/batch/stop_guest/",
+			"/batch/stop_guest/:id",
+			"/migrations/",
+			"/migrations/:id",
+			"/monitor_channels/:id",
+			"/monitor_channels/",
+			"/roles/",
+			"/roles/:role",
+			"/user_groups/",
+			"/user_groups/:group",
+			"/user_groups/:group/members/",
+			"/user_groups/:group/members/:user",
+			"/users/",
+			"/users/:user",
+			"/users/:user/password/",
+			"/user_search/*filepath",
+			"/sessions/",
+			"/sessions/:session",
+			"/logs/",
+			"/resource_visibilities/:session",
+			"/guest_search/*filepath",
+			"/media_image_search/*filepath",
+			"/disk_image_search/*filepath",
+		}
+		for _, path := range paths{
+			router.OPTIONS(mapAPIPath(path), service.allowCORSRequest)
+		}
+	}
 }
-func (service *FrontEndService) apiPath(path string) string{
+
+func mapAPIPath(path string) string{
 	return fmt.Sprintf("%s/v%d%s", APIRoot, APIVersion, path)
 }
+
+func (service *FrontEndService) processCORSHeaders(w http.ResponseWriter, r *http.Request){
+	if !service.corsEnable{
+		return
+	}
+	var origin = r.Header.Get("Origin")
+	if 0 != len(origin){
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+}
+
+func (service *FrontEndService) allowCORSRequest(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTION, PUT, DELETE, HEAD")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, portal_session, Access-Control-Allow-Origin")
+	w.WriteHeader(http.StatusOK)
+}
+
 func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	const(
 		DefaultURL = "/login.html"
@@ -688,7 +788,7 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 	service.reverseProxy.ServeHTTP(w, r)
 }
 
-func (service *FrontEndService) handleFileRequest(w http.ResponseWriter, r *http.Request){
+func (service *FrontEndService) handlePageRequest(w http.ResponseWriter, r *http.Request){
 	if !service.userInitialed{
 		//need initial
 		var resp = make(chan error, 1)
@@ -708,16 +808,15 @@ func (service *FrontEndService) handleFileRequest(w http.ResponseWriter, r *http
 	service.fileHandler.ServeHTTP(w, r)
 }
 
-func (service *FrontEndService) initialSystem(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	if !service.userInitialed{
-		service.fileHandler.ServeHTTP(w, r)
-		return
-	}
-	const loginPage = "/login.html"
-	log.Printf("<frontend> redirect initial request to login page: %s", loginPage)
-	http.Redirect(w, r, loginPage, http.StatusTemporaryRedirect)
-}
-
+//func (service *FrontEndService) initialSystem(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+//	if !service.userInitialed{
+//		service.fileHandler.ServeHTTP(w, r)
+//		return
+//	}
+//	const loginPage = "/login.html"
+//	log.Printf("<frontend> redirect initial request to login page: %s", loginPage)
+//	http.Redirect(w, r, loginPage, http.StatusTemporaryRedirect)
+//}
 
 type Response struct {
 	ErrorCode int         `json:"error_code"`
