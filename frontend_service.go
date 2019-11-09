@@ -363,7 +363,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	//sessions
 	router.GET(mapAPIPath("/sessions/"), service.querySessions)
-	router.GET(mapAPIPath("/sessions/:session"), service.getSession)
+	//router.GET(mapAPIPath("/sessions/:session"), service.getSession)
 	router.POST(mapAPIPath("/sessions/"), service.createSession)
 	router.PUT(mapAPIPath("/sessions/:session"), service.updateSession)
 
@@ -485,13 +485,11 @@ func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *htt
 	http.Redirect(w, r, DefaultURL, http.StatusMovedPermanently)
 }
 
-func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	//check session
-	var err error
+func (service *FrontEndService) getLoggedSession(w http.ResponseWriter, r *http.Request) (session LoggedSession, err error){
+	service.processCORSHeaders(w, r)
 	var sessionID = r.Header.Get(HeaderNameSession)
 	if 0 == len(sessionID){
 		err = errors.New("unauthenticated request")
-		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	var resp = make(chan SessionResult, 1)
@@ -499,8 +497,16 @@ func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http
 	var result = <- resp
 	if result.Error != nil{
 		err = result.Error
-		log.Printf("<frontend> get session fail: %s", err.Error())
-		err = errors.New("invalid session")
+		return
+	}
+	session = result.Session
+	return
+}
+
+func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	//check session
+	var err error
+	if _, err = service.getLoggedSession(w, r); err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
@@ -512,6 +518,7 @@ func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http
 	}
 	service.reverseProxy.ServeHTTP(w, r)
 }
+
 func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 	const (
 		defaultScope    = "/default"
@@ -639,6 +646,10 @@ func computeHMACSha256(key, data []byte) (hash []byte, err error){
 }
 
 func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	const (
 		ParamSession = "session"
 		ParamOwner = "owner"
@@ -689,6 +700,10 @@ func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Requ
 
 
 func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	const (
 		ParamSession = "session"
 		ParamOwner = "owner"
@@ -739,6 +754,10 @@ func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.
 
 
 func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	const (
 		ParamSession = "session"
 		ParamOwner = "owner"
@@ -831,7 +850,7 @@ const (
 func ResponseFail(code int, message string, writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(Response{code, message, struct{}{}})
+	return encoder.Encode(Response{code, message, ""})
 }
 
 func ResponseOK(data interface{}, writer io.Writer) error {
@@ -843,6 +862,10 @@ func ResponseOK(data interface{}, writer io.Writer) error {
 //user roles
 
 func (service *FrontEndService) queryRoles(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var data = make([]string, 0)
 	var respChan = make(chan UserResult, 1)
 	service.userManager.QueryRoles(respChan)
@@ -859,6 +882,10 @@ func (service *FrontEndService) queryRoles(w http.ResponseWriter, r *http.Reques
 }
 
 func (service *FrontEndService) getRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var roleName = params.ByName("role")
 	var respChan = make(chan UserResult, 1)
 	service.userManager.GetRole(roleName, respChan)
@@ -875,6 +902,10 @@ func (service *FrontEndService) getRole(w http.ResponseWriter, r *http.Request, 
 }
 
 func (service *FrontEndService) addRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var roleName = params.ByName("role")
 	type RequestData struct {
 		Menu []string `json:"menu,omitempty"`
@@ -897,6 +928,10 @@ func (service *FrontEndService) addRole(w http.ResponseWriter, r *http.Request, 
 }
 
 func (service *FrontEndService) modifyRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var roleName = params.ByName("role")
 	type RequestData struct {
 		Menu []string `json:"menu,omitempty"`
@@ -919,6 +954,10 @@ func (service *FrontEndService) modifyRole(w http.ResponseWriter, r *http.Reques
 }
 
 func (service *FrontEndService) removeRole(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var roleName = params.ByName("role")
 	var respChan = make(chan error, 1)
 	service.userManager.RemoveRole(roleName, respChan)
@@ -934,6 +973,10 @@ func (service *FrontEndService) removeRole(w http.ResponseWriter, r *http.Reques
 //user groups
 
 func (service *FrontEndService) queryGroups(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	type RespGroup struct {
 		Name    string `json:"name"`
 		Display string `json:"display"`
@@ -956,6 +999,10 @@ func (service *FrontEndService) queryGroups(w http.ResponseWriter, r *http.Reque
 }
 
 func (service *FrontEndService) getGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	var respChan = make(chan UserResult, 1)
 	service.userManager.GetGroup(groupName, respChan)
@@ -987,6 +1034,10 @@ func (service *FrontEndService) getGroup(w http.ResponseWriter, r *http.Request,
 }
 
 func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	type RequestData struct {
 		Display string   `json:"display"`
@@ -1010,6 +1061,10 @@ func (service *FrontEndService) addGroup(w http.ResponseWriter, r *http.Request,
 }
 
 func (service *FrontEndService) modifyGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	type RequestData struct {
 		Display string   `json:"display"`
@@ -1033,6 +1088,10 @@ func (service *FrontEndService) modifyGroup(w http.ResponseWriter, r *http.Reque
 }
 
 func (service *FrontEndService) removeGroup(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	var respChan = make(chan error, 1)
 	service.userManager.RemoveGroup(groupName, respChan)
@@ -1045,6 +1104,10 @@ func (service *FrontEndService) removeGroup(w http.ResponseWriter, r *http.Reque
 }
 
 func (service *FrontEndService) queryGroupMembers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	var respChan = make(chan UserResult, 1)
 	service.userManager.QueryGroupMembers(groupName, respChan)
@@ -1061,6 +1124,10 @@ func (service *FrontEndService) queryGroupMembers(w http.ResponseWriter, r *http
 }
 
 func (service *FrontEndService) addGroupMember(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	var userName = params.ByName("user")
 	var respChan = make(chan error, 1)
@@ -1074,6 +1141,10 @@ func (service *FrontEndService) addGroupMember(w http.ResponseWriter, r *http.Re
 }
 
 func (service *FrontEndService) removeGroupMember(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var groupName = params.ByName("group")
 	var userName = params.ByName("user")
 	var respChan = make(chan error, 1)
@@ -1090,6 +1161,10 @@ func (service *FrontEndService) removeGroupMember(w http.ResponseWriter, r *http
 //users
 
 func (service *FrontEndService) queryUsers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var payload = make([]string, 0)
 	var respChan = make(chan UserResult, 1)
 	service.userManager.QueryUsers(respChan)
@@ -1106,6 +1181,10 @@ func (service *FrontEndService) queryUsers(w http.ResponseWriter, r *http.Reques
 }
 
 func (service *FrontEndService) getUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var userName = params.ByName("user")
 	var respChan = make(chan UserResult, 1)
 	service.userManager.GetUser(userName, respChan)
@@ -1125,6 +1204,10 @@ func (service *FrontEndService) getUser(w http.ResponseWriter, r *http.Request, 
 }
 
 func (service *FrontEndService) createUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var userName = params.ByName("user")
 	type RequestData struct {
 		Nick     string `json:"nick,omitempty"`
@@ -1149,6 +1232,10 @@ func (service *FrontEndService) createUser(w http.ResponseWriter, r *http.Reques
 }
 
 func (service *FrontEndService) modifyUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var userName = params.ByName("user")
 	type RequestData struct {
 		Nick           string `json:"nick,omitempty"`
@@ -1172,6 +1259,10 @@ func (service *FrontEndService) modifyUser(w http.ResponseWriter, r *http.Reques
 }
 
 func (service *FrontEndService) deleteUser(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var userName = params.ByName("user")
 	var respChan = make(chan error, 1)
 	service.userManager.DeleteUser(userName, respChan)
@@ -1184,6 +1275,10 @@ func (service *FrontEndService) deleteUser(w http.ResponseWriter, r *http.Reques
 }
 
 func (service *FrontEndService) modifyUserPassword(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var userName = params.ByName("user")
 	type RequestData struct {
 		Old string `json:"old"`
@@ -1207,6 +1302,10 @@ func (service *FrontEndService) modifyUserPassword(w http.ResponseWriter, r *htt
 }
 
 func (service *FrontEndService) searchUsers(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var query = r.URL.Query()
 	var targetGroup = query.Get("group")
 	var payload = make([]string, 0)
@@ -1227,6 +1326,10 @@ func (service *FrontEndService) searchUsers(w http.ResponseWriter, r *http.Reque
 //sessions
 
 func (service *FrontEndService) querySessions(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var payload = make([]string, 0)
 	var respChan = make(chan SessionResult, 1)
 	service.sessionManager.QuerySessions(respChan)
@@ -1242,26 +1345,22 @@ func (service *FrontEndService) querySessions(w http.ResponseWriter, r *http.Req
 	ResponseOK(payload, w)
 }
 
-func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	var sessionID = params.ByName("session")
-	var respChan = make(chan SessionResult, 1)
-	service.sessionManager.GetSession(sessionID, respChan)
-	var result = <- respChan
-	if result.Error != nil{
-		ResponseFail(DefaultServerError, result.Error.Error(), w)
-		return
-	}
-	type RespSession struct {
-		User    string   `json:"user"`
-		Menu    []string `json:"menu,omitempty"`
-		Timeout int      `json:"timeout"`
-		Group   string   `json:"group"`
-		Address string   `json:"address,omitempty"`
-	}
-	var session = result.Session
-	var payload = RespSession{session.User, session.Menu, session.Timeout, session.Group, session.Address}
-	ResponseOK(payload, w)
-}
+//func (service *FrontEndService) getSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+//	session, err := service.getLoggedSession(w, r)
+//	if err != nil{
+//		ResponseFail(DefaultServerError, err.Error(), w)
+//		return
+//	}
+//	type RespSession struct {
+//		User    string   `json:"user"`
+//		Menu    []string `json:"menu,omitempty"`
+//		Timeout int      `json:"timeout"`
+//		Group   string   `json:"group"`
+//		Address string   `json:"address,omitempty"`
+//	}
+//	var payload = RespSession{session.User, session.Menu, session.Timeout, session.Group, session.Address}
+//	ResponseOK(payload, w)
+//}
 
 func getRemoteIP(r *http.Request) (ip string, err error) {
 	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
@@ -1288,7 +1387,7 @@ func getRemoteIP(r *http.Request) (ip string, err error) {
 }
 
 func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	service.processCORSHeaders(w, r)
 	type RequestData struct {
 		User     string `json:"user"`
 		Password string `json:"password"`
@@ -1360,6 +1459,10 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 }
 
 func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	var sessionID = params.ByName("session")
 	var respChan = make(chan error, 1)
 	service.sessionManager.UpdateSession(sessionID, respChan)
@@ -1373,7 +1476,10 @@ func (service *FrontEndService) updateSession(w http.ResponseWriter, r *http.Req
 
 //logs
 func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	type RequestData struct {
 		Limit  int
 		Start  int
@@ -1472,6 +1578,10 @@ func (service *FrontEndService) queryLogs(w http.ResponseWriter, r *http.Request
 }
 
 func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	type RequestData struct {
 		Format  string `json:"format,omitempty"`
 		Content string `json:"content"`
@@ -1494,6 +1604,10 @@ func (service *FrontEndService) addLog(w http.ResponseWriter, r *http.Request, p
 }
 
 func (service *FrontEndService) removeLog(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	type RequestData struct {
 		Entries []string `json:"entries"`
 	}
@@ -1515,21 +1629,12 @@ func (service *FrontEndService) removeLog(w http.ResponseWriter, r *http.Request
 }
 
 func (service *FrontEndService) updateVisibility(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	var sessionID = params.ByName("session")
-	var err error
-	var groupName string
-	{
-		//verify session
-		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.GetSession(sessionID, respChan)
-		var result = <- respChan
-		if result.Error != nil{
-			err = result.Error
-			ResponseFail(DefaultServerError, err.Error(), w)
-			return
-		}
-		groupName = result.Session.Group
+	session, err := service.getLoggedSession(w, r)
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
 	}
+	var groupName = session.Group
 	{
 		//update
 		var visibility GroupVisibility
@@ -1550,21 +1655,12 @@ func (service *FrontEndService) updateVisibility(w http.ResponseWriter, r *http.
 }
 
 func (service *FrontEndService) getVisibility(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	var sessionID = params.ByName("session")
-	var err error
-	var groupName string
-	{
-		//verify session
-		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.GetSession(sessionID, respChan)
-		var result = <- respChan
-		if result.Error != nil{
-			err = result.Error
-			ResponseFail(DefaultServerError, err.Error(), w)
-			return
-		}
-		groupName = result.Session.Group
+	session, err := service.getLoggedSession(w, r)
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
 	}
+	var groupName = session.Group
 	{
 		var respChan = make(chan UserResult, 1)
 		service.userManager.GetVisibility(groupName, respChan)
