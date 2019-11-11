@@ -474,7 +474,19 @@ func (service *FrontEndService) processCORSHeaders(w http.ResponseWriter, r *htt
 func (service *FrontEndService) allowCORSRequest(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTION, PUT, DELETE, HEAD")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, portal_session, Access-Control-Allow-Origin")
+	var allowedHeaders = []string{
+		"Accept",
+		"Content-Type",
+		"Content-Length",
+		"Accept-Encoding",
+		"X-CSRF-Token",
+		"Access-Control-Allow-Origin",
+		HeaderNameSession,
+		HeaderNameDate,
+		HeaderNameScope,
+		HeaderNameAuthorization,
+	}
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
 	w.WriteHeader(http.StatusOK)
 }
 
