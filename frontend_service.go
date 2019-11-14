@@ -570,9 +570,29 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		var headersBuilder strings.Builder
 		var lowerHeaders []string
 		var hasBody = true
+		var payload []byte
 		if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
 			hasBody = false
+		}else if payload, err = ioutil.ReadAll(r.Body); err != nil{
+			if err == io.EOF{
+				hasBody = false
+			}else{
+				err = fmt.Errorf("read request body fail: %s", err.Error())
+				return
+			}
 		}
+		//hash with sha256
+		var hash = sha256.New()
+		if !hasBody{
+			hash.Write([]byte(""))
+		}else {
+			//clone request payload
+			hash.Write(payload)
+			r.Body = ioutil.NopCloser(bytes.NewBuffer(payload))
+		}
+		var hashedPayload = strings.ToLower(hex.EncodeToString(hash.Sum(nil)))
+
+
 		for _, headerName := range service.sortedSignatureHeaders{
 			if !hasBody && HeaderNameContentType == headerName{
 				//ignore content type when no body available
@@ -591,20 +611,7 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		}
 		canonicalHeaders = headersBuilder.String()
 		signedHeaders = strings.Join(lowerHeaders, ";")
-		//hash with sha256
-		var hash = sha256.New()
-		if !hasBody{
-			hash.Write([]byte(""))
-		}else {
-			//clone request payload
-			var payload []byte
-			if payload, err = ioutil.ReadAll(r.Body); err != nil{
-				return
-			}
-			hash.Write(payload)
-			r.Body = ioutil.NopCloser(bytes.NewBuffer(payload))
-		}
-		var hashedPayload = strings.ToLower(hex.EncodeToString(hash.Sum(nil)))
+
 		var canonicalRequestContent = strings.Join([]string{
 			canonicalURI,
 			canonicalQueryString,
