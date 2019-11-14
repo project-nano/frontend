@@ -574,12 +574,13 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
 			hasBody = false
 		}else if payload, err = ioutil.ReadAll(r.Body); err != nil{
-			if err == io.EOF{
-				hasBody = false
-			}else{
+			if err != io.EOF{
 				err = fmt.Errorf("read request body fail: %s", err.Error())
 				return
 			}
+			hasBody = false
+		}else if 0 == len(payload){
+			hasBody = false
 		}
 		//hash with sha256
 		var hash = sha256.New()
