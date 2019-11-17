@@ -51,7 +51,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion          = "1.1.0"
+	CurrentVersion          = "1.1.1"
 	HeaderNameHost          = "Host"
 	HeaderNameContentType   = "Content-Type"
 	HeaderNameSession       = "Nano-Session"
@@ -666,37 +666,19 @@ func computeHMACSha256(key, data []byte) (hash []byte, err error){
 }
 
 func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	if _, err := service.getLoggedSession(w, r); err != nil{
+	session, err := service.getLoggedSession(w, r)
+	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	const (
-		ParamSession = "session"
 		ParamOwner = "owner"
 		ParamGroup = "group"
 	)
-	var sessionID = r.URL.Query().Get(ParamSession)
-	var err error
-	if 0 == len(sessionID){
-		err = errors.New("session ID required")
-		ResponseFail(DefaultServerError, err.Error(), w)
-		return
-	}
 	var queryParams = r.URL.Query()
-	var groupName string
-	{
-		//verify session
-		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.GetSession(sessionID, respChan)
-		var result = <- respChan
-		if result.Error != nil{
-			err = result.Error
-			ResponseFail(DefaultServerError, err.Error(), w)
-			return
-		}
-		groupName = result.Session.Group
-		queryParams.Set(ParamOwner, result.Session.User)
-	}
+	queryParams.Set(ParamOwner, session.User)
+
+	var groupName = session.Group
 	{
 		var respChan = make(chan UserResult, 1)
 		service.userManager.GetVisibility(groupName, respChan)
@@ -708,49 +690,35 @@ func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Requ
 		}
 		var visibility = result.Visibility
 		//replace params
-		queryParams.Del(ParamSession)
 		if visibility.InstanceVisible{
 			queryParams.Set(ParamGroup, groupName)
 		}
 		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
+	if err = service.signatureRequest(r); err != nil{
+		err = fmt.Errorf("signature api fail: %s", err.Error())
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+
 	service.reverseProxy.ServeHTTP(w, r)
 }
 
-
 func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	if _, err := service.getLoggedSession(w, r); err != nil{
+	session, err := service.getLoggedSession(w, r)
+	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	const (
-		ParamSession = "session"
 		ParamOwner = "owner"
 		ParamGroup = "group"
 	)
-	var sessionID = r.URL.Query().Get(ParamSession)
-	var err error
-	if 0 == len(sessionID){
-		err = errors.New("session ID required")
-		ResponseFail(DefaultServerError, err.Error(), w)
-		return
-	}
 	var queryParams = r.URL.Query()
-	var groupName string
-	{
-		//verify session
-		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.GetSession(sessionID, respChan)
-		var result = <- respChan
-		if result.Error != nil{
-			err = result.Error
-			ResponseFail(DefaultServerError, err.Error(), w)
-			return
-		}
-		groupName = result.Session.Group
-		queryParams.Set(ParamOwner, result.Session.User)
-	}
+	queryParams.Set(ParamOwner, session.User)
+
+	var groupName = session.Group
 	{
 		var respChan = make(chan UserResult, 1)
 		service.userManager.GetVisibility(groupName, respChan)
@@ -762,50 +730,35 @@ func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.
 		}
 		var visibility = result.Visibility
 		//replace params
-		queryParams.Del(ParamSession)
 		if visibility.DiskImageVisible{
 			queryParams.Set(ParamGroup, groupName)
 		}
 		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
+	if err = service.signatureRequest(r); err != nil{
+		err = fmt.Errorf("signature api fail: %s", err.Error())
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	service.reverseProxy.ServeHTTP(w, r)
 }
 
 
 func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	if _, err := service.getLoggedSession(w, r); err != nil{
+	session, err := service.getLoggedSession(w, r)
+	if err != nil{
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
 	const (
-		ParamSession = "session"
 		ParamOwner = "owner"
 		ParamGroup = "group"
 	)
-	var sessionID = r.URL.Query().Get(ParamSession)
-	var err error
-	if 0 == len(sessionID){
-		err = errors.New("session ID required")
-		ResponseFail(DefaultServerError, err.Error(), w)
-		return
-	}
-	var groupName string
 	var queryParams = r.URL.Query()
-	{
-		//verify session
-		var respChan = make(chan SessionResult, 1)
-		service.sessionManager.GetSession(sessionID, respChan)
-		var result = <- respChan
-		if result.Error != nil{
-			err = result.Error
-			ResponseFail(DefaultServerError, err.Error(), w)
-			return
-		}
-		groupName = result.Session.Group
-		queryParams.Set(ParamOwner, result.Session.User)
-	}
+	queryParams.Set(ParamOwner, session.User)
 
+	var groupName = session.Group
 	{
 		var respChan = make(chan UserResult, 1)
 		service.userManager.GetVisibility(groupName, respChan)
@@ -817,13 +770,17 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 		}
 		var visibility = result.Visibility
 		//replace params
-		queryParams.Del(ParamSession)
 		if visibility.MediaImageVisible{
 			queryParams.Set(ParamGroup, groupName)
 		}
 		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
+	if err = service.signatureRequest(r); err != nil{
+		err = fmt.Errorf("signature api fail: %s", err.Error())
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	service.reverseProxy.ServeHTTP(w, r)
 }
 
