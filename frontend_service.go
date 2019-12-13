@@ -51,7 +51,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion          = "1.1.1"
+	CurrentVersion          = "1.1.2"
 	HeaderNameHost          = "Host"
 	HeaderNameContentType   = "Content-Type"
 	HeaderNameSession       = "Nano-Session"

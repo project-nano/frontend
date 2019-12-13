@@ -9,15 +9,21 @@ import (
 	"github.com/pkg/errors"
 	"github.com/gorilla/websocket"
 	"net"
+	"time"
 )
 
 func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	if _, err := service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
 	type userRequest struct {
 		Guest string `json:"guest"`
 	}
 	var request userRequest
+	var err error
 	var decoder = json.NewDecoder(r.Body)
-	if err := decoder.Decode(&request);err != nil{
+	if err = decoder.Decode(&request);err != nil{
 		log.Printf("<%s> [create channel] parse request fail: %s", r.RemoteAddr, err.Error())
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
@@ -36,7 +42,24 @@ func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *htt
 			Message   string        `json:"message"`
 			Data      MonitorConfig `json:"data"`
 		}
-		resp, err := http.Get(fmt.Sprintf("%s/guests/%s", service.backendURL, request.Guest))
+		var getGuestRequest *http.Request
+		if getGuestRequest, err = http.NewRequest("GET", fmt.Sprintf("%s/guests/%s", service.backendURL, request.Guest), nil); err != nil{
+			log.Printf("<%s> [create channel] build request fail: %s", r.RemoteAddr, err.Error())
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		getGuestRequest.Host = service.backendHost
+		for name, value := range r.Header{
+			getGuestRequest.Header.Set(name, value[0])
+		}
+		if err = service.signatureRequest(getGuestRequest); err != nil{
+			log.Printf("<%s> [create channel] signature request fail: %s", r.RemoteAddr, err.Error())
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
+		var client = &http.Client{Timeout: time.Second * 10}
+
+		resp, err := client.Do(getGuestRequest)
 		if err != nil{
 			log.Printf("<%s> [create channel] get guest config fail: %s", r.RemoteAddr, err.Error())
 			ResponseFail(DefaultServerError, err.Error(), w)

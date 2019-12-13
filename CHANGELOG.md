@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.1.2] - 2019-12-13
+
+### Changed
+
+- Enable CORS request to monitor channel
+
 ## [1.1.0] - 2019-11-05
 
 ### Added 
