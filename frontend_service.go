@@ -60,6 +60,8 @@ const (
 	HeaderNameAuthorization = "Nano-Authorization"
 	APIRoot                 = "/api"
 	APIVersion              = 1
+	CoreAPIRoot             = "/api"
+	CoreAPIVersion          = 1
 )
 
 
@@ -114,8 +116,10 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 		return
 	}
 	service.backendHost = config.ServiceHost
-	service.backendURL = fmt.Sprintf("http://%s:%d", config.ServiceHost, config.ServicePort)
-	proxyUrl, err := url.Parse(service.backendURL)
+	var proxyTarget = fmt.Sprintf("http://%s:%d", config.ServiceHost, config.ServicePort)
+	service.backendURL = fmt.Sprintf("%s%s/v%d", proxyTarget,
+		CoreAPIRoot, CoreAPIVersion)
+	proxyUrl, err := url.Parse(proxyTarget)
 	if err != nil{
 		return
 	}
@@ -623,6 +627,8 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		hash.Reset()
 		hash.Write([]byte(canonicalRequestContent))
 		canonicalRequest = hex.EncodeToString(hash.Sum(nil))
+		//log.Printf("debug: %d bytes of canonical request %s hashed to %s",
+		//	len(canonicalRequestContent), canonicalRequestContent, canonicalRequest)
 	}
 	{
 
@@ -643,6 +649,7 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		if signKey, err = computeHMACSha256(key, data); err != nil{
 			return
 		}
+		//log.Printf("debug: content: %s, key %s", stringToSign, hex.EncodeToString(signKey))
 		var hmacSignature []byte
 		if hmacSignature, err = computeHMACSha256(signKey, []byte(stringToSign)); err != nil{
 			return

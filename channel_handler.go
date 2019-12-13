@@ -1,14 +1,14 @@
 package main
 
 import (
-	"net/http"
-	"github.com/julienschmidt/httprouter"
 	"encoding/json"
-	"log"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/gorilla/websocket"
+	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
+	"log"
 	"net"
+	"net/http"
 	"time"
 )
 
