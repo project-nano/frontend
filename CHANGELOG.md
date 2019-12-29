@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.1.3] - 2019-12-29
+
+### Fixed
+
+- Visibility interface broken
+- Query logs missing and wrong order    
+
 ## [1.1.2] - 2019-12-13
 
 ### Changed

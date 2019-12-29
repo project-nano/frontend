@@ -241,21 +241,20 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 		MaxEntry = 1000
 	)
 	total = 0
-
-	if condition.EndTime.Sub(condition.BeginTime) < 0{
+	if condition.EndTime.Before(condition.BeginTime){
 		err = fmt.Errorf("invalid time range (%s ~ %s)", condition.BeginTime.Format(TimeFormatLayout), condition.EndTime.Format(TimeFormatLayout))
 		return
 	}
 	var queried, offset = 0, 0
 	var inTimeRange = false
-	var endDate = condition.EndTime.Add(Day)
-	for date := condition.BeginTime; date.Before(endDate); date = date.Add(Day){
+	for date := condition.EndTime; date.After(condition.BeginTime); date = date.Add(-Day){
 		var logFilePath = filepath.Join(agent.logRoot, date.Format(MonthFormat), fmt.Sprintf("%s.log", date.Format(DateFormat)))
 
 		var isCurrentLog = logFilePath == agent.currentLogPath
 		var logLines []string
 		if isCurrentLog{
 			logLines = agent.logContent
+			//log.Printf("<log> debug: %d lines loaded from current log", len(logLines))
 		}else{
 			if _, err = os.Stat(logFilePath); os.IsNotExist(err){
 				//log.Printf("<log> warning: query ignores absent log '%s'", logFilePath)
@@ -273,7 +272,8 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 			logFile.Close()
 		}
 
-		for _, line := range logLines{
+
+		for _, line := range logLines {
 			var entry LogEntry
 			entry, err = parseLog(line)
 			if err != nil{
@@ -281,7 +281,7 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 				return
 			}
 			if !inTimeRange {
-				if entry.Time.After(condition.BeginTime){
+				if entry.Time.Before(condition.EndTime){
 					//range start
 					inTimeRange = true
 				}
@@ -292,7 +292,7 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 					offset++
 					continue
 				}
-				if entry.Time.After(condition.EndTime){
+				if entry.Time.Before(condition.BeginTime){
 					break
 				}
 				if total >= MaxEntry{
@@ -310,11 +310,11 @@ func (agent *LogAgent) Query(condition LogQueryCondition) (logs []LogEntry, tota
 			break
 		}
 	}
-	log.Printf("<log> %d / %d entries queried between (%s ~ %s), start from %d, with limit %d",
-		len(logs), total,
-		condition.BeginTime.Format(TimeFormatLayout),
-		condition.EndTime.Format(TimeFormatLayout),
-		condition.Start, condition.Limit)
+	//log.Printf("<log> %d / %d entries queried between (%s ~ %s), start from %d, with limit %d",
+	//	len(logs), total,
+	//	condition.BeginTime.Format(TimeFormatLayout),
+	//	condition.EndTime.Format(TimeFormatLayout),
+	//	condition.Start, condition.Limit)
 	return logs, total,nil
 }
 

@@ -51,7 +51,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion          = "1.1.2"
+	CurrentVersion          = "1.1.3"
 	HeaderNameHost          = "Host"
 	HeaderNameContentType   = "Content-Type"
 	HeaderNameSession       = "Nano-Session"
@@ -367,7 +367,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	//sessions
 	router.GET(mapAPIPath("/sessions/"), service.querySessions)
-	//router.GET(mapAPIPath("/sessions/:session"), service.getSession)
 	router.POST(mapAPIPath("/sessions/"), service.createSession)
 	router.PUT(mapAPIPath("/sessions/:session"), service.updateSession)
 
@@ -377,8 +376,8 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.DELETE(mapAPIPath("/logs/"), service.removeLog)
 
 	//visibility
-	router.GET(mapAPIPath("/resource_visibilities/:session"), service.getVisibility)
-	router.PUT(mapAPIPath("/resource_visibilities/:session"), service.updateVisibility)
+	router.GET(mapAPIPath("/resource_visibilities/"), service.getVisibility)
+	router.PUT(mapAPIPath("/resource_visibilities/"), service.updateVisibility)
 
 	router.GET(mapAPIPath("/guest_search/*filepath"), service.searchGuests)
 	router.GET(mapAPIPath("/media_image_search/*filepath"), service.searchMediaImages)
@@ -450,7 +449,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/sessions/",
 			"/sessions/:session",
 			"/logs/",
-			"/resource_visibilities/:session",
+			"/resource_visibilities/",
 			"/guest_search/*filepath",
 			"/media_image_search/*filepath",
 			"/disk_image_search/*filepath",
