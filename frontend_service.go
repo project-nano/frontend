@@ -383,6 +383,10 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	router.GET(mapAPIPath("/media_image_search/*filepath"), service.searchMediaImages)
 	router.GET(mapAPIPath("/disk_image_search/*filepath"), service.searchDiskImages)
 
+	//initial system
+	router.GET(mapAPIPath("/system/"), service.getSystemStatus)
+	router.POST(mapAPIPath("/system/"), service.initialSystemStatus)
+
 	//OCRS
 	if service.corsEnable{
 		var paths = []string{
@@ -453,6 +457,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/guest_search/*filepath",
 			"/media_image_search/*filepath",
 			"/disk_image_search/*filepath",
+			"/system/",
 		}
 		for _, path := range paths{
 			router.OPTIONS(mapAPIPath(path), service.allowCORSRequest)
@@ -491,13 +496,6 @@ func (service *FrontEndService) allowCORSRequest(w http.ResponseWriter, r *http.
 	}
 	w.Header().Set("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
 	w.WriteHeader(http.StatusOK)
-}
-
-func (service *FrontEndService) defaultLandingPage(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-	const(
-		DefaultURL = "/login.html"
-	)
-	http.Redirect(w, r, DefaultURL, http.StatusMovedPermanently)
 }
 
 func (service *FrontEndService) getLoggedSession(w http.ResponseWriter, r *http.Request) (session LoggedSession, err error){
@@ -791,34 +789,8 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 }
 
 func (service *FrontEndService) handlePageRequest(w http.ResponseWriter, r *http.Request){
-	if !service.userInitialed{
-		//need initial
-		var resp = make(chan error, 1)
-		service.userManager.IsInitialed(resp)
-		var err = <- resp
-		if err != nil{
-			//not initialed
-			const initialPage = "initial.html"
-			log.Printf("<frontend> redirect to initial page '%s'", initialPage)
-			http.Redirect(w, r, initialPage, http.StatusTemporaryRedirect)
-			return
-		}else{
-			log.Println("<frontend> system initialed")
-			service.userInitialed = true
-		}
-	}
 	service.fileHandler.ServeHTTP(w, r)
 }
-
-//func (service *FrontEndService) initialSystem(w http.ResponseWriter, r *http.Request, params httprouter.Params){
-//	if !service.userInitialed{
-//		service.fileHandler.ServeHTTP(w, r)
-//		return
-//	}
-//	const loginPage = "/login.html"
-//	log.Printf("<frontend> redirect initial request to login page: %s", loginPage)
-//	http.Redirect(w, r, loginPage, http.StatusTemporaryRedirect)
-//}
 
 type Response struct {
 	ErrorCode int         `json:"error_code"`
@@ -1660,5 +1632,82 @@ func (service *FrontEndService) getVisibility(w http.ResponseWriter, r *http.Req
 		}
 		var v = result.Visibility
 		ResponseOK(VisibilityPayload{v.InstanceVisible, v.DiskImageVisible, v.MediaImageVisible}, w)
+	}
+}
+
+func (service *FrontEndService) getSystemStatus(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	service.processCORSHeaders(w, r)
+	type Payload struct {
+		Ready bool `json:"ready"`
+	}
+	var payload = Payload{Ready: false}
+	if !service.userInitialed{
+		var respChan = make(chan error, 1)
+		service.userManager.IsInitialed(respChan)
+		var result = <- respChan
+		if nil == result{
+			//initialed
+			service.userInitialed = true
+			payload.Ready = true
+			log.Println("<frontend> system initialed")
+		}
+	}else{
+		payload.Ready = true
+	}
+	ResponseOK(payload, w)
+}
+
+func (service *FrontEndService) initialSystemStatus(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	service.processCORSHeaders(w, r)
+	if service.userInitialed{
+		ResponseFail(DefaultServerError, "system already initialed", w)
+		return
+	}
+	type RequestData struct {
+		User     string   `json:"user"`
+		Group    string   `json:"group,omitempty"`
+		Display  string   `json:"display,omitempty"`
+		Role     string   `json:"role,omitempty"`
+		Password string   `json:"password"`
+		Menu     []string `json:"menu"`
+	}
+	var requestData RequestData
+	var decoder = json.NewDecoder(r.Body)
+	var err error
+	if err = decoder.Decode(&requestData);err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	if 0 == len(requestData.Menu){
+		ResponseFail(DefaultServerError, "require at least one menu item", w)
+		return
+	}
+
+	const (
+		DefaultGroup = "admin"
+		DefaultDisplay = "Adminitrators of Nano Portal"
+		DefaultRole = "super"
+	)
+	if 0 == len(requestData.Group){
+		requestData.Group = DefaultGroup
+		log.Printf("<frontend> set default group to '%s'", requestData.Group)
+	}
+	if 0 == len(requestData.Display){
+		requestData.Display = DefaultDisplay
+		log.Printf("<frontend> set default group display to '%s'", requestData.Display)
+	}
+	if 0 == len(requestData.Role){
+		requestData.Role = DefaultRole
+		log.Printf("<frontend> set default role to '%s'", requestData.Role)
+	}
+	var respChan = make(chan error, 1)
+	service.userManager.Initial(requestData.User, requestData.Group, requestData.Display, requestData.Role,
+		requestData.Password, requestData.Menu, respChan)
+	err = <- respChan
+	if err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}else{
+		ResponseOK("", w)
 	}
 }

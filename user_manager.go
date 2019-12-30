@@ -94,6 +94,7 @@ const (
 	cmdIsInitialed
 	cmdUpdateVisibility
 	cmdGetVisibility
+	cmdInitial
 )
 
 type userCMD struct {
@@ -361,6 +362,10 @@ func (manager *UserManager) GetVisibility(group string, resp chan UserResult)  {
 	manager.commands <- userCMD{Type: cmdGetVisibility, Group:group, ResultChan:resp}
 }
 
+func (manager *UserManager) Initial(user, group, display, role, password string, menuList []string, resp chan error)  {
+	manager.commands <- userCMD{Type: cmdInitial, User: user, Group: group, Display: display, Role: role, Password: password, Menu: menuList, ErrorChan: resp}
+}
+
 func (manager *UserManager) handleCommand(cmd userCMD){
 	var err error
 	switch cmd.Type {
@@ -412,6 +417,8 @@ func (manager *UserManager) handleCommand(cmd userCMD){
 		err = manager.handleUpdateVisibility(cmd.Group, cmd.Visibility, cmd.ErrorChan)
 	case cmdGetVisibility:
 		err = manager.handleGetVisibility(cmd.Group, cmd.ResultChan)
+	case cmdInitial:
+		err = manager.handleInitial(cmd.User, cmd.Group, cmd.Display, cmd.Role, cmd.Password, cmd.Menu, cmd.ErrorChan)
 	default:
 		log.Printf("<user> unsupport command type %d", cmd.Type)
 		return 
@@ -900,6 +907,72 @@ func (manager *UserManager) handleGetVisibility(groupName string, resp chan User
 		return
 	}
 	resp <- UserResult{Visibility: group.Visibility}
+	return nil
+}
+
+func (manager *UserManager) handleInitial(userName, groupName, displayName, roleName, password string, menuList []string, resp chan error) (err error) {
+	if 0 != len(manager.users){
+		err = errors.New("system already initialed")
+		resp <- err
+		return
+	}
+	if err = manager.validateName(userName); err != nil{
+		err = fmt.Errorf("invalid user name: %s", err.Error())
+		resp <- err
+		return
+	}
+	if err = manager.validateName(groupName); err != nil{
+		err = fmt.Errorf("invalid group name: %s", err.Error())
+		resp <- err
+		return
+	}
+	if err = manager.validateName(roleName); err != nil{
+		err = fmt.Errorf("invalid role name: %s", err.Error())
+		resp <- err
+		return
+	}
+	var exists = false
+	if _, exists = manager.users[userName]; exists{
+		err = fmt.Errorf("user '%s' already exists", userName)
+		resp <- err
+		return
+	}
+	if _, exists = manager.roles[roleName]; exists{
+		err = fmt.Errorf("role '%s' already exists", roleName)
+		resp <- err
+		return
+	}
+	if _, exists = manager.groups[groupName]; exists{
+		err = fmt.Errorf("group '%s' already exists", groupName)
+		resp <- err
+		return
+	}
+	if err = isSecurePassword(password); err != nil{
+		resp <- err
+		return
+	}
+	if 0 == len(menuList){
+		errors.New("require at least one menu item")
+		resp <- err
+		return
+	}
+	secret, err := hashPassword(methodBCrypt, password)
+	if err != nil{
+		resp <- err
+		return err
+	}
+	var user = LoginUser{Name:userName, Secret:secret}
+	var role = UserRole{roleName, menuList}
+
+	var groupMember = map[string]bool{ userName: true}
+	var groupRole = map[string]bool{roleName: true}
+	var group = UserGroup{groupName, displayName, groupRole, groupMember, GroupVisibility{}}
+
+	manager.users[userName] = user
+	manager.roles[roleName] = role
+	manager.groups[groupName] = group
+	log.Printf("<user> initialed user '%s.%s' with role '%s', %d menus enabled", groupName, userName, roleName, len(menuList))
+	resp <- nil
 	return nil
 }
 
