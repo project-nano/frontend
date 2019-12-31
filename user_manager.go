@@ -961,7 +961,7 @@ func (manager *UserManager) handleInitial(userName, groupName, displayName, role
 		resp <- err
 		return err
 	}
-	var user = LoginUser{Name:userName, Secret:secret}
+	var user = LoginUser{Name:userName, Secret:secret, Group: groupName}
 	var role = UserRole{roleName, menuList}
 
 	var groupMember = map[string]bool{ userName: true}
@@ -973,7 +973,7 @@ func (manager *UserManager) handleInitial(userName, groupName, displayName, role
 	manager.groups[groupName] = group
 	log.Printf("<user> initialed user '%s.%s' with role '%s', %d menus enabled", groupName, userName, roleName, len(menuList))
 	resp <- nil
-	return nil
+	return manager.saveConfig()
 }
 
 func (manager *UserManager) validateName(name string) (err error){
