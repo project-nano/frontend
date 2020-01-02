@@ -17,6 +17,7 @@ type FrontEndConfig struct {
 	ServicePort   int    `json:"service_port"`
 	APIKey        string `json:"api_key"`
 	APIID         string `json:"api_id"`
+	WebRoot       string `json:"web_root"`
 	CORSEnable    bool   `json:"cors_enable,omitempty"`
 }
 
@@ -25,11 +26,11 @@ type MainService struct {
 }
 
 const (
-	ExecuteName      = "frontend"
-	ConfigFileName   = "frontend.cfg"
-	ConfigPathName   = "config"
-	ResourcePathName = "resource"
-	DataPathName     = "data"
+	ExecuteName    = "frontend"
+	ConfigFileName = "frontend.cfg"
+	ConfigPathName = "config"
+	WebRootName    = "web_root"
+	DataPathName   = "data"
 )
 
 func (service *MainService)Start() (output string, err error){
@@ -78,6 +79,7 @@ func generateConfigure(workingPath string) (err error){
 			DefaultBackEndPort = 5850
 			DefaultFrontEndPort = 5870
 		)
+		var defaultWebRoot = filepath.Join(workingPath, WebRootName)
 		var config = FrontEndConfig{}
 		if config.ListenAddress, err = framework.ChooseIPV4Address("Portal listen address");err !=nil{
 			return
@@ -89,6 +91,9 @@ func generateConfigure(workingPath string) (err error){
 			return
 		}
 		if config.ServicePort, err = framework.InputInteger("Backend service port", DefaultBackEndPort); err != nil{
+			return
+		}
+		if config.WebRoot, err = framework.InputString("Web Root Path", defaultWebRoot); err != nil{
 			return
 		}
 		//write
@@ -116,23 +121,17 @@ func generateConfigure(workingPath string) (err error){
 
 func createDaemon(workingPath string) (service framework.DaemonizedService, err error){
 	var configPath = filepath.Join(workingPath, ConfigPathName)
-	var resourcePath = filepath.Join(workingPath, ResourcePathName)
 	var dataPath = filepath.Join(workingPath, DataPathName)
 	if _, err = os.Stat(configPath); os.IsNotExist(err){
 		err = fmt.Errorf("config path %s not available", configPath)
-		return nil, err
-	}
-	if _, err = os.Stat(resourcePath); os.IsNotExist(err){
-		err = fmt.Errorf("resource path %s not available", resourcePath)
 		return nil, err
 	}
 	if _, err = os.Stat(dataPath); os.IsNotExist(err){
 		err = fmt.Errorf("data path %s not available", dataPath)
 		return nil, err
 	}
-
 	var s = MainService{}
-	s.frontend, err = CreateFrontEnd(configPath, resourcePath, dataPath)
+	s.frontend, err = CreateFrontEnd(configPath, dataPath)
 	return &s, err
 }
 

@@ -19,6 +19,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -43,6 +44,8 @@ type FrontEndService struct {
 	apiID                  string
 	apiKey                 string
 	corsEnable             bool
+	webRoot                string
+	spaPage                string
 	runner                 *framework.SimpleRunner
 }
 
@@ -62,24 +65,44 @@ const (
 	APIVersion              = 1
 	CoreAPIRoot             = "/api"
 	CoreAPIVersion          = 1
+	DefaultPageName         = "index.html"
 )
 
 
 func (proxy *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request){
-	proxy.service.handlePageRequest(w, r)
+	proxy.service.routeToDefaultPage(w, r)
 }
 
-func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEndService, err error ) {
+func saveConfig(config FrontEndConfig, filename string) (err error) {
+	var data []byte
+	if data, err = json.MarshalIndent(config, "", " "); err != nil{
+		err = fmt.Errorf("marshal new config fail: %s", err.Error())
+		return
+	}
+	var file *os.File
+	if file, err = os.Create(filename); err != nil{
+		err = fmt.Errorf("create new config '%s' fail: %s", filename, err.Error())
+		return
+	}
+	defer file.Close()
+	if _, err = file.Write(data); err != nil{
+		err = fmt.Errorf("write new config '%s' fail: %s", filename, err.Error())
+		return
+	}
+	return nil
+}
+
+func CreateFrontEnd(configPath, dataPath string) (service *FrontEndService, err error ) {
 	var configFile = filepath.Join(configPath, ConfigFileName)
-	data, err := ioutil.ReadFile(configFile)
-	if err != nil {
+	var data []byte
+	if data, err = ioutil.ReadFile(configFile); err != nil {
 		return
 	}
 	var config FrontEndConfig
-	err = json.Unmarshal(data, &config)
-	if err != nil {
+	if err = json.Unmarshal(data, &config); err != nil {
 		return
 	}
+	var configModified = false
 	if 0 == len(config.APIID){
 		const (
 			dummyID  = "dummyID"
@@ -87,26 +110,33 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 		)
 		config.APIID = dummyID
 		config.APIKey = dummyKey
-		if data, err = json.MarshalIndent(config, "", " "); err != nil{
-			err = fmt.Errorf("marshal new config fail: %s", err.Error())
-			return
-		}
-		var file *os.File
-		if file, err = os.Create(configFile); err != nil{
-			err = fmt.Errorf("create new config fail: %s", err.Error())
-			return
-		}
-		defer file.Close()
-		if _, err = file.Write(data); err != nil{
-			err = fmt.Errorf("write new config fail: %s", err.Error())
-			return
-		}
 		log.Printf("<api> warning: dummy API credential '%s' created", dummyID)
+		configModified = true
 	}else if 0 == len(config.APIKey){
 		err = errors.New("API Key required")
 		return
 	}
+	var webRoot = config.WebRoot
+	if 0 == len(webRoot){
+		var workingPath = filepath.Dir(configPath)
+		config.WebRoot = filepath.Join(workingPath, WebRootName)
+		webRoot = config.WebRoot
+		configModified = true
+		log.Printf("<frontend> set default web root path to '%s'", webRoot)
+	}
+	if _, err = os.Stat(webRoot); os.IsNotExist(err){
+		err = fmt.Errorf("web root path %s not exists", webRoot)
+		return
+	}
+	if configModified{
+		if err = saveConfig(config, configFile); err != nil{
+			log.Printf("<frontend> update config fail: %s", err.Error())
+			return
+		}
+	}
+
 	service = &FrontEndService{}
+	service.webRoot = webRoot
 	service.apiID = config.APIID
 	service.apiKey = config.APIKey
 	service.corsEnable = config.CORSEnable
@@ -130,13 +160,34 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 	}
 	var router = httprouter.New()
 	service.registerHandler(router)
-	const (
-		CSSPath = "css"
-		JSPath = "js"
-	)
-	router.ServeFiles("/css/*filepath", http.Dir(filepath.Join(resourcePath, CSSPath)))
-	router.ServeFiles("/js/*filepath", http.Dir(filepath.Join(resourcePath, JSPath)))
-
+	service.spaPage = filepath.Join(webRoot, DefaultPageName)
+	err = filepath.Walk(webRoot, func(path string, info os.FileInfo, previousErr error) error {
+		if previousErr != nil{
+			return fmt.Errorf("encounter error in path '%s': %s", previousErr.Error())
+		}
+		if path == webRoot || filepath.Dir(path) != webRoot{
+			//ignore root
+			return nil
+		}
+		if info.IsDir(){
+			//map path
+			var pathName = filepath.Base(path)
+			var webPath = fmt.Sprintf("/%s/*filepath", pathName)
+			var filePath = filepath.Join(webRoot, pathName)
+			//log.Printf("<frontend> debug: mapped path '%s' => '%s'", webPath, filePath)
+			router.ServeFiles(webPath, http.Dir(filePath))
+		}else{
+			//single file
+			var filename = filepath.Base(path)
+			var fileURl = fmt.Sprintf("/%s", filename)
+			//log.Printf("<frontend> debug: mapped file '%s' => '%s'", fileURl, webRoot)
+			router.Handle("GET", fileURl, service.mapSingleFile)
+		}
+		return nil
+	})
+	if err != nil{
+		return
+	}
 	router.NotFound = &Proxy{service}
 
 	service.frontendServer.Handler = router
@@ -154,7 +205,7 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 		return
 	}
 	service.userInitialed = service.userManager.IsUserAvailable()
-	service.fileHandler = http.FileServer(http.Dir(resourcePath))
+	service.fileHandler = http.FileServer(http.Dir(webRoot))
 	service.sortedSignatureHeaders = []string{
 		HeaderNameHost,
 		HeaderNameContentType,
@@ -163,7 +214,7 @@ func CreateFrontEnd(configPath, resourcePath, dataPath string) (service *FrontEn
 		HeaderNameScope,
 	}
 	sort.Reverse(sort.StringSlice(service.sortedSignatureHeaders))
-	log.Printf("<frontend> CORS %t", service.corsEnable)
+	log.Printf("<frontend> CORS %t, web root: %s", service.corsEnable, webRoot)
 	return
 }
 
@@ -788,8 +839,16 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 	service.reverseProxy.ServeHTTP(w, r)
 }
 
-func (service *FrontEndService) handlePageRequest(w http.ResponseWriter, r *http.Request){
-	service.fileHandler.ServeHTTP(w, r)
+func (service *FrontEndService) mapSingleFile(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	var filename = path.Base(r.RequestURI)
+	var target = filepath.Join(service.webRoot, filename)
+	//log.Printf("<frontend> debug: mapped %s => %s", r.RequestURI, target)
+	http.ServeFile(w, r, target)
+}
+
+func (service *FrontEndService) routeToDefaultPage(w http.ResponseWriter, r *http.Request){
+	//log.Printf("<frontend> debug: route %s => %s", r.RequestURI, service.spaPage)
+	http.ServeFile(w, r, service.spaPage)
 }
 
 type Response struct {

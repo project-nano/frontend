@@ -2,6 +2,10 @@
 
 ## [1.1.3] - 2019-12-29
 
+### Added
+
+- Add web_root option to "frontend.cfg" for hosting portal files
+
 ### Fixed
 
 - Visibility interface broken
