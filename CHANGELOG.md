@@ -5,6 +5,12 @@
 ### Added
 
 - Add web_root option to "frontend.cfg" for hosting portal files
+- Add cors_enable option to "frontend.cfg" for CORS control
+
+### Changed
+
+- A new portal completely was rewritten using React
+- Web pages move from 'resource' to 'web_root'
 
 ### Fixed
 
