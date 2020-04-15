@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.2.0] - 2020-04-15
+
+### Added
+
+- Query/Change storage path
+- Manage system templates
+- Create guest using template
+- Reset monitor secret
+
 ## [1.1.3] - 2019-12-29
 
 ### Added

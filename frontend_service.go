@@ -54,7 +54,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion          = "1.1.3"
+	CurrentVersion          = "1.2.0"
 	HeaderNameHost          = "Host"
 	HeaderNameContentType   = "Content-Type"
 	HeaderNameSession       = "Nano-Session"
@@ -299,6 +299,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guests/:id/name/", PUT)//modify guest name
 	redirect(router, "/guests/:id/auth", PUT)
 	redirect(router, "/guests/:id/auth", GET)
+	redirect(router, "/guests/:id/monitor/secret", PUT)
 	redirect(router, "/guests/:id/disks/resize/:index", PUT)
 	redirect(router, "/guests/:id/disks/shrink/:index", PUT)
 
@@ -321,6 +322,9 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/compute_pool_cells/:pool/:cell", POST)
 	redirect(router, "/compute_pool_cells/:pool/:cell", PUT)
 	redirect(router, "/compute_pool_cells/:pool/:cell", DELETE)
+	redirect(router, "/compute_cell_status/:pool/:cell/storages/", GET)
+	redirect(router, "/compute_cell_status/:pool/:cell/storages/", POST)
+
 
 	//address pool
 	redirect(router, "/address_pools/", GET)
@@ -377,6 +381,13 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/migrations/", GET)
 	redirect(router, "/migrations/:id", GET)
 	redirect(router, "/migrations/", POST)
+
+	//system templates
+	redirect(router, "/templates/", GET)
+	redirect(router, "/templates/:id", GET)
+	redirect(router, "/templates/", POST)
+	redirect(router, "/templates/:id", PUT)
+	redirect(router, "/templates/:id", DELETE)
 
 	//inner function
 
@@ -452,6 +463,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/guests/:id/qos/network",
 			"/guests/:id/name/",
 			"/guests/:id/auth",
+			"/guests/:id/monitor/secret",
 			"/guests/:id/disks/resize/:index",
 			"/guests/:id/disks/shrink/:index",
 			"/compute_zone_status/",
@@ -459,6 +471,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/compute_pool_status/:pool",
 			"/compute_cell_status/:pool",
 			"/compute_cell_status/:pool/:cell",
+			"/compute_cell_status/:pool/:cell/storages/",
 			"/instance_status/:pool",
 			"/instance_status/:pool/:cell",
 			"/compute_pools/",
@@ -509,6 +522,8 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/media_image_search/*filepath",
 			"/disk_image_search/*filepath",
 			"/system/",
+			"/templates/",
+			"/templates/:id",
 		}
 		for _, path := range paths{
 			router.OPTIONS(mapAPIPath(path), service.allowCORSRequest)
