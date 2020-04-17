@@ -323,7 +323,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/compute_pool_cells/:pool/:cell", PUT)
 	redirect(router, "/compute_pool_cells/:pool/:cell", DELETE)
 	redirect(router, "/compute_cell_status/:pool/:cell/storages/", GET)
-	redirect(router, "/compute_cell_status/:pool/:cell/storages/", POST)
+	redirect(router, "/compute_cell_status/:pool/:cell/storages/", PUT)
 
 
 	//address pool
