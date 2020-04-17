@@ -277,7 +277,11 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	)
 
 	var redirect = func(r *httprouter.Router, path string, method string) {
-		r.Handle(method, mapAPIPath(path), service.redirectToBackend)
+		r.Handle(method, mapAPIPath(path), service.redirectRequest)
+	}
+
+	var redirectStream = func(r *httprouter.Router, path string, method string) {
+		r.Handle(method, mapAPIPath(path), service.redirectStream)
 	}
 
 	//API
@@ -351,14 +355,14 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/media_images/:id", GET)
 	redirect(router, "/media_images/:id", DELETE)
 	redirect(router, "/media_images/:id", PUT)//modify media image info
-	redirect(router, "/media_images/:id/file/", POST)
+	redirectStream(router, "/media_images/:id/file/", POST)
 
 	redirect(router, "/disk_images/", POST)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
 	redirect(router, "/disk_images/:id", PUT) //modify disk image info
-	redirect(router, "/disk_images/:id/file/", GET)
-	redirect(router, "/disk_images/:id/file/", POST)
+	redirectStream(router, "/disk_images/:id/file/", GET)
+	redirectStream(router, "/disk_images/:id/file/", POST)
 
 	redirect(router, "/instances/:id/media", POST)
 	redirect(router, "/instances/:id/media", DELETE)
@@ -582,7 +586,7 @@ func (service *FrontEndService) getLoggedSession(w http.ResponseWriter, r *http.
 	return
 }
 
-func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+func (service *FrontEndService) redirectRequest(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	//check session
 	var err error
 	if _, err = service.getLoggedSession(w, r); err != nil{
@@ -590,7 +594,7 @@ func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http
 		return
 	}
 	r.Host = service.backendHost
-	if err = service.signatureRequest(r); err != nil{
+	if err = service.generateRequestSignature(r); err != nil{
 		err = fmt.Errorf("signature api fail: %s", err.Error())
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
@@ -598,7 +602,31 @@ func (service *FrontEndService) redirectToBackend(w http.ResponseWriter, r *http
 	service.reverseProxy.ServeHTTP(w, r)
 }
 
-func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
+func (service *FrontEndService) redirectStream(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	//check session
+	var err error
+	if _, err = service.getLoggedSession(w, r); err != nil{
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	r.Host = service.backendHost
+	if err = service.generateStreamSignature(r); err != nil{
+		err = fmt.Errorf("signature stream fail: %s", err.Error())
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	service.reverseProxy.ServeHTTP(w, r)
+}
+
+func (service *FrontEndService) generateRequestSignature(r *http.Request) error{
+	return service.generateSignature(r, true)
+}
+
+func (service *FrontEndService) generateStreamSignature(r *http.Request) error{
+	return service.generateSignature(r, false)
+}
+
+func (service *FrontEndService) generateSignature(r *http.Request, processPayload bool) (err error){
 	const (
 		defaultScope    = "/default"
 		signatureMethod = "Nano-HMAC-SHA256"
@@ -637,29 +665,35 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		var headersBuilder strings.Builder
 		var lowerHeaders []string
 		var hasBody = true
-		var payload []byte
-		if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
-			hasBody = false
-		}else if payload, err = ioutil.ReadAll(r.Body); err != nil{
-			if err != io.EOF{
-				err = fmt.Errorf("read request body fail: %s", err.Error())
-				return
-			}
-			hasBody = false
-		}else if 0 == len(payload){
-			hasBody = false
-		}
-		//hash with sha256
+		var hashedPayload string
 		var hash = sha256.New()
-		if !hasBody{
-			hash.Write([]byte(""))
-		}else {
-			//clone request payload
-			hash.Write(payload)
-			r.Body = ioutil.NopCloser(bytes.NewBuffer(payload))
-		}
-		var hashedPayload = strings.ToLower(hex.EncodeToString(hash.Sum(nil)))
+		if processPayload{
+			var payload []byte
+			if http.MethodGet == r.Method || http.MethodHead == r.Method || http.MethodOptions == r.Method{
+				hasBody = false
+			}else if payload, err = ioutil.ReadAll(r.Body); err != nil{
+				if err != io.EOF{
+					err = fmt.Errorf("read request body fail: %s", err.Error())
+					return
+				}
+				hasBody = false
+			}else if 0 == len(payload){
+				hasBody = false
+			}
+			//hash with sha256
 
+			if !hasBody{
+				hash.Write([]byte(""))
+			}else {
+				//clone request payload
+				hash.Write(payload)
+				r.Body = ioutil.NopCloser(bytes.NewBuffer(payload))
+			}
+			hashedPayload = strings.ToLower(hex.EncodeToString(hash.Sum(nil)))
+			hash.Reset()
+		}else{
+			hasBody = false
+		}
 
 		for _, headerName := range service.sortedSignatureHeaders{
 			if !hasBody && HeaderNameContentType == headerName{
@@ -680,14 +714,17 @@ func (service *FrontEndService) signatureRequest(r *http.Request) (err error){
 		canonicalHeaders = headersBuilder.String()
 		signedHeaders = strings.Join(lowerHeaders, ";")
 
-		var canonicalRequestContent = strings.Join([]string{
+		var requestContent = []string{
 			canonicalURI,
 			canonicalQueryString,
 			canonicalHeaders,
 			signedHeaders,
-			hashedPayload,
-		}, "\n")
-		hash.Reset()
+		}
+		if processPayload{
+			requestContent = append(requestContent, hashedPayload)
+		}
+
+		var canonicalRequestContent = strings.Join(requestContent, "\n")
 		hash.Write([]byte(canonicalRequestContent))
 		canonicalRequest = hex.EncodeToString(hash.Sum(nil))
 		//log.Printf("debug: %d bytes of canonical request %s hashed to %s",
@@ -766,7 +803,7 @@ func (service *FrontEndService) searchGuests(w http.ResponseWriter, r *http.Requ
 		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
-	if err = service.signatureRequest(r); err != nil{
+	if err = service.generateRequestSignature(r); err != nil{
 		err = fmt.Errorf("signature api fail: %s", err.Error())
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
@@ -806,7 +843,7 @@ func (service *FrontEndService) searchDiskImages(w http.ResponseWriter, r *http.
 		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
-	if err = service.signatureRequest(r); err != nil{
+	if err = service.generateRequestSignature(r); err != nil{
 		err = fmt.Errorf("signature api fail: %s", err.Error())
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
@@ -846,7 +883,7 @@ func (service *FrontEndService) searchMediaImages(w http.ResponseWriter, r *http
 		r.URL.RawQuery = queryParams.Encode()
 	}
 	r.Host = service.backendHost
-	if err = service.signatureRequest(r); err != nil{
+	if err = service.generateRequestSignature(r); err != nil{
 		err = fmt.Errorf("signature api fail: %s", err.Error())
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return

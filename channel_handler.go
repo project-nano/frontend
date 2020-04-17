@@ -52,7 +52,7 @@ func (service *FrontEndService)handleCreateChannel(w http.ResponseWriter, r *htt
 		for name, value := range r.Header{
 			getGuestRequest.Header.Set(name, value[0])
 		}
-		if err = service.signatureRequest(getGuestRequest); err != nil{
+		if err = service.generateRequestSignature(getGuestRequest); err != nil{
 			log.Printf("<%s> [create channel] signature request fail: %s", r.RemoteAddr, err.Error())
 			ResponseFail(DefaultServerError, err.Error(), w)
 			return

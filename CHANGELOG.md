@@ -9,6 +9,10 @@
 - Create guest using template
 - Reset monitor secret
 
+### Fixed
+
+- Huge memory occupied when uploading images cause OOM kill
+
 ## [1.1.3] - 2019-12-29
 
 ### Added
