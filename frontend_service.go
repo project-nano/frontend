@@ -284,6 +284,12 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 		r.Handle(method, mapAPIPath(path), service.redirectStream)
 	}
 
+	var redirectUnsecuredStream = func(r *httprouter.Router, path string, method string) {
+		r.Handle(method, mapAPIPath(path), service.redirectUnsecuredStream)
+	}
+
+
+
 	//API
 	redirect(router, "/instances/:id", GET)
 	redirect(router, "/instances/:id", POST)
@@ -361,7 +367,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
 	redirect(router, "/disk_images/:id", PUT) //modify disk image info
-	redirectStream(router, "/disk_images/:id/file/", GET)
+	redirectUnsecuredStream(router, "/disk_images/:id/file/", GET)
 	redirectStream(router, "/disk_images/:id/file/", POST)
 
 	redirect(router, "/instances/:id/media", POST)
@@ -609,6 +615,18 @@ func (service *FrontEndService) redirectStream(w http.ResponseWriter, r *http.Re
 		ResponseFail(DefaultServerError, err.Error(), w)
 		return
 	}
+	r.Host = service.backendHost
+	if err = service.generateStreamSignature(r); err != nil{
+		err = fmt.Errorf("signature stream fail: %s", err.Error())
+		ResponseFail(DefaultServerError, err.Error(), w)
+		return
+	}
+	service.reverseProxy.ServeHTTP(w, r)
+}
+
+func (service *FrontEndService) redirectUnsecuredStream(w http.ResponseWriter, r *http.Request, params httprouter.Params){
+	var err error
+	r.Header.Set(HeaderNameSession, "unsecured")
 	r.Host = service.backendHost
 	if err = service.generateStreamSignature(r); err != nil{
 		err = fmt.Errorf("signature stream fail: %s", err.Error())
