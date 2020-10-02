@@ -54,7 +54,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion          = "1.2.0"
+	CurrentVersion          = "1.3.0"
 	HeaderNameHost          = "Host"
 	HeaderNameContentType   = "Content-Type"
 	HeaderNameSession       = "Nano-Session"
@@ -1518,6 +1518,11 @@ func (service *FrontEndService) createSession(w http.ResponseWriter, r *http.Req
 			return
 		}
 		user = result.User
+		if "" == user.Group{
+			var err = fmt.Errorf("%s not belongs to any group", requestData.User)
+			ResponseFail(DefaultServerError, err.Error(), w)
+			return
+		}
 	}
 	{
 

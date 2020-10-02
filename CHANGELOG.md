@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.3.0] - 2020-10-02
+
+### Fixed
+
+- Return an explicit error when login with a user does not belong to any group
+
 ## [1.2.0] - 2020-04-15
 
 ### Added
