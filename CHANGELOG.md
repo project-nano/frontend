@@ -5,6 +5,7 @@
 ### Fixed
 
 - Return an explicit error when login with a user does not belong to any group
+- Remove from the group when deleting a user
 
 ## [1.2.0] - 2020-04-15
 

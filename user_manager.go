@@ -800,14 +800,32 @@ func (manager *UserManager) handleModifyUser(name, nick, mail string, resp chan 
 	return manager.saveConfig()
 }
 
-func (manager *UserManager) handleDeleteUser(name string, resp chan error)  (err error){
-	if _, exists := manager.users[name]; !exists{
-		err = fmt.Errorf("invalid user '%s'", name)
+func (manager *UserManager) handleDeleteUser(userName string, resp chan error)  (err error){
+	var user LoginUser
+	var exists = false
+	if user, exists = manager.users[userName]; !exists{
+		err = fmt.Errorf("invalid user '%s'", userName)
 		resp <- err
 		return err
 	}
-	delete(manager.users, name)
-	log.Printf("<user> user '%s' deleted", name)
+	var groupName = user.Group
+	if "" != groupName{
+		var group UserGroup
+		if group, exists = manager.groups[groupName]; !exists{
+			err = fmt.Errorf("invalid group '%s' of user '%s", groupName, userName)
+			resp <- err
+			return err
+		}
+		if _, exists = group.Members[userName]; !exists{
+			err = fmt.Errorf("member '%s' not in group '%s'", userName, groupName)
+			resp <- err
+			return err
+		}
+		delete(group.Members, userName)
+		manager.groups[groupName] = group
+	}
+	delete(manager.users, userName)
+	log.Printf("<user> user '%s' deleted", userName)
 	resp <- nil
 	return manager.saveConfig()
 }
