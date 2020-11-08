@@ -274,6 +274,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 		POST   = "POST"
 		PUT    = "PUT"
 		DELETE = "DELETE"
+		PATCH  = "PATCH"
 	)
 
 	var redirect = func(r *httprouter.Router, path string, method string) {
@@ -287,8 +288,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	var redirectUnsecuredStream = func(r *httprouter.Router, path string, method string) {
 		r.Handle(method, mapAPIPath(path), service.redirectUnsecuredStream)
 	}
-
-
 
 	//API
 	redirect(router, "/instances/:id", GET)
@@ -335,7 +334,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/compute_cell_status/:pool/:cell/storages/", GET)
 	redirect(router, "/compute_cell_status/:pool/:cell/storages/", PUT)
 
-
 	//address pool
 	redirect(router, "/address_pools/", GET)
 	redirect(router, "/address_pools/:pool", GET)
@@ -357,6 +355,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/storage_pools/:pool", DELETE)
 
 	redirect(router, "/media_images/", GET)
+	redirect(router, "/media_images/", PATCH)
 	redirect(router, "/media_images/", POST)
 	redirect(router, "/media_images/:id", GET)
 	redirect(router, "/media_images/:id", DELETE)
@@ -364,6 +363,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirectStream(router, "/media_images/:id/file/", POST)
 
 	redirect(router, "/disk_images/", POST)
+	redirect(router, "/disk_images/", PATCH)
 	redirect(router, "/disk_images/:id", GET)
 	redirect(router, "/disk_images/:id", DELETE)
 	redirect(router, "/disk_images/:id", PUT) //modify disk image info
@@ -398,6 +398,26 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/templates/", POST)
 	redirect(router, "/templates/:id", PUT)
 	redirect(router, "/templates/:id", DELETE)
+
+	//security policy group
+	redirect(router, "/security_policy_groups/*filepath", GET)
+	redirect(router, "/security_policy_groups/:id", GET)
+	redirect(router, "/security_policy_groups/", POST)
+	redirect(router, "/security_policy_groups/:id", PUT)
+	redirect(router, "/security_policy_groups/:id", DELETE)
+
+	redirect(router, "/security_policy_groups/:id/rules/", GET)
+	redirect(router, "/security_policy_groups/:id/rules/", POST)
+	redirect(router, "/security_policy_groups/:id/rules/:index", PUT)
+	redirect(router, "/security_policy_groups/:id/rules/:index", DELETE)
+	redirect(router, "/security_policy_groups/:id/rules/:index/order", PUT)
+
+	redirect(router, "/guests/:id/security_policy/", GET)
+	redirect(router, "/guests/:id/security_policy/default_action", PUT)
+	redirect(router, "/guests/:id/security_policy/rules/", POST)
+	redirect(router, "/guests/:id/security_policy/rules/:index", PUT)
+	redirect(router, "/guests/:id/security_policy/rules/:index", DELETE)
+	redirect(router, "/guests/:id/security_policy/rules/:index/order", PUT)
 
 	//inner function
 
