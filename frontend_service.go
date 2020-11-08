@@ -400,7 +400,6 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/templates/:id", DELETE)
 
 	//security policy group
-	redirect(router, "/security_policy_groups/*filepath", GET)
 	redirect(router, "/security_policy_groups/:id", GET)
 	redirect(router, "/security_policy_groups/", POST)
 	redirect(router, "/security_policy_groups/:id", PUT)
@@ -418,6 +417,9 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 	redirect(router, "/guests/:id/security_policy/rules/:index", PUT)
 	redirect(router, "/guests/:id/security_policy/rules/:index", DELETE)
 	redirect(router, "/guests/:id/security_policy/rules/:index/order", PUT)
+
+	//resource search
+	redirect(router, "/search/security_policy_groups/*filepath", GET)
 
 	//inner function
 
@@ -496,6 +498,11 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/guests/:id/monitor/secret",
 			"/guests/:id/disks/resize/:index",
 			"/guests/:id/disks/shrink/:index",
+			"/guests/:id/security_policy/",
+			"/guests/:id/security_policy/default_action",
+			"/guests/:id/security_policy/rules/",
+			"/guests/:id/security_policy/rules/:index",
+			"/guests/:id/security_policy/rules/:index/order",
 			"/compute_zone_status/",
 			"/compute_pool_status/",
 			"/compute_pool_status/:pool",
@@ -554,6 +561,12 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/system/",
 			"/templates/",
 			"/templates/:id",
+			"/security_policy_groups/",
+			"/security_policy_groups/:id",
+			"/security_policy_groups/:id/rules/",
+			"/security_policy_groups/:id/rules/:index",
+			"/security_policy_groups/:id/rules/:index/order",
+			"/search/security_policy_groups/*filepath",
 		}
 		for _, path := range paths{
 			router.OPTIONS(mapAPIPath(path), service.allowCORSRequest)
@@ -577,7 +590,7 @@ func (service *FrontEndService) processCORSHeaders(w http.ResponseWriter, r *htt
 
 func (service *FrontEndService) allowCORSRequest(w http.ResponseWriter, r *http.Request, params httprouter.Params){
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTION, PUT, DELETE, HEAD")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTION, PUT, DELETE, HEAD, PATCH")
 	var allowedHeaders = []string{
 		"Accept",
 		"Content-Type",
