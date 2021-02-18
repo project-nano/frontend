@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.3.1] - 2021-02-18
+
+### Added
+
+- Search guests
+- Enable/Disable auto start option
+
 ## [1.3.0] - 2020-11-08
 
 ### Added

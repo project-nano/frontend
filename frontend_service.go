@@ -54,7 +54,7 @@ type Proxy struct {
 }
 
 const (
-	CurrentVersion          = "1.3.0"
+	CurrentVersion          = "1.3.1"
 	HeaderNameHost          = "Host"
 	HeaderNameContentType   = "Content-Type"
 	HeaderNameSession       = "Nano-Session"
@@ -300,6 +300,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	redirect(router, "/guests/:id/cores", PUT)
 	redirect(router, "/guests/:id/memory", PUT)
+	redirect(router, "/guests/:id/auto_start", PUT)
 	redirect(router, "/guests/:id/system/", PUT)
 	redirect(router, "/guests/:id/qos/cpu", PUT)
 	redirect(router, "/guests/:id/qos/disk", PUT)
@@ -420,7 +421,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 
 	//resource search
 	redirect(router, "/search/security_policy_groups/*filepath", GET)
-
+	redirect(router, "/search/guests/", POST)
 	//inner function
 
 	//router.GET(mapAPIPath("/"), service.defaultLandingPage)
@@ -489,6 +490,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/guests/",
 			"/guests/:id/cores",
 			"/guests/:id/memory",
+			"/guests/:id/auto_start",
 			"/guests/:id/system/",
 			"/guests/:id/qos/cpu",
 			"/guests/:id/qos/disk",
@@ -567,6 +569,7 @@ func (service *FrontEndService)registerHandler(router *httprouter.Router){
 			"/security_policy_groups/:id/rules/:index",
 			"/security_policy_groups/:id/rules/:index/order",
 			"/search/security_policy_groups/*filepath",
+			"/search/guests/",
 		}
 		for _, path := range paths{
 			router.OPTIONS(mapAPIPath(path), service.allowCORSRequest)
