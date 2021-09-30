@@ -57,6 +57,11 @@ func (service *MainService)Stop() (output string, err error){
 	return
 }
 
+func (service *MainService) Snapshot() (output string, err error){
+	output ="hello, this is stub for snapshot"
+	return
+}
+
 func generateConfigure(workingPath string) (err error){
 	const (
 		DefaultPathPerm = 0740
