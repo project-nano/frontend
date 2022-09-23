@@ -21,7 +21,7 @@ REST API: <https://nanoen.docs.apiary.io/>
 ```go
 #git clone https://github.com/project-nano/frontend.git
 #cd frontend
-#go build -o frontend -i -ldflags="-w -s"
+#go build -o frontend -ldflags="-w -s"
 ```
 
 
