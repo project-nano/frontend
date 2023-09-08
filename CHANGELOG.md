@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.4.0] - 2023-09-07
+
+### Changed
+
+- update to go 1.20
+- update dependent packages
+
+### Fixed
+
+- Search guests not filter by owner and group
+
 ## [1.3.1] - 2021-02-18
 
 ### Added

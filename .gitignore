@@ -16,5 +16,6 @@ config
 log
 pkg
 frontend
+frontend.*
 
 
