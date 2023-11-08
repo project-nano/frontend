@@ -15,7 +15,7 @@
 config
 log
 pkg
+test
 frontend
 frontend.*
-
 

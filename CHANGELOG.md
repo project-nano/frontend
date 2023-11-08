@@ -1,11 +1,19 @@
 # Change Log
 
-## [1.4.0] - 2023-09-07
+## [1.4.0] - 2023-11-07
+
+### Added
+
+- Add option "max_cores" to configure file "frontend.cfg", default value is 24
+- Add option "max_memory" to configure file "frontend.cfg", default value is 32GB
+- Add option "max_disk" to configure file "frontend.cfg", default value is 64GB
 
 ### Changed
 
 - update to go 1.20
 - update dependent packages
+- Add test cases to front_service
+- Return max resource limit when get system status on path 'GET: /system/'
 
 ### Fixed
 

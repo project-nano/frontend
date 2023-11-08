@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/project-nano/framework"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -19,6 +18,9 @@ type FrontEndConfig struct {
 	APIID         string `json:"api_id"`
 	WebRoot       string `json:"web_root"`
 	CORSEnable    bool   `json:"cors_enable,omitempty"`
+	MaxCores      int    `json:"max_cores,omitempty"`
+	MaxMemory     int    `json:"max_memory,omitempty"`
+	MaxDisk       int    `json:"max_disk,omitempty"`
 }
 
 type MainService struct {
@@ -26,19 +28,22 @@ type MainService struct {
 }
 
 const (
-	ExecuteName    = "frontend"
-	ConfigFileName = "frontend.cfg"
-	ConfigPathName = "config"
-	WebRootName    = "web_root"
-	DataPathName   = "data"
+	ExecuteName      = "frontend"
+	ConfigFileName   = "frontend.cfg"
+	ConfigPathName   = "config"
+	WebRootName      = "web_root"
+	DataPathName     = "data"
+	DefaultMaxCores  = 24
+	DefaultMaxMemory = 32
+	DefaultMaxDisk   = 64
 )
 
-func (service *MainService)Start() (output string, err error){
+func (service *MainService) Start() (output string, err error) {
 	if nil == service.frontend {
 		err = errors.New("invalid service")
 		return
 	}
-	if err = service.frontend.Start();err != nil{
+	if err = service.frontend.Start(); err != nil {
 		return
 	}
 	output = fmt.Sprintf("Front-End Module %s\nCore API: %s\nNano Web Portal: http://%s\n",
@@ -48,7 +53,7 @@ func (service *MainService)Start() (output string, err error){
 	return
 }
 
-func (service *MainService)Stop() (output string, err error){
+func (service *MainService) Stop() (output string, err error) {
 	if nil == service.frontend {
 		err = errors.New("invalid service")
 		return
@@ -57,12 +62,12 @@ func (service *MainService)Stop() (output string, err error){
 	return
 }
 
-func (service *MainService) Snapshot() (output string, err error){
-	output ="hello, this is stub for snapshot"
+func (service *MainService) Snapshot() (output string, err error) {
+	output = "hello, this is stub for snapshot"
 	return
 }
 
-func generateConfigure(workingPath string) (err error){
+func generateConfigure(workingPath string) (err error) {
 	const (
 		DefaultPathPerm = 0740
 	)
@@ -80,33 +85,38 @@ func generateConfigure(workingPath string) (err error){
 	if _, err = os.Stat(configFile); os.IsNotExist(err) {
 		fmt.Println("No configures available, following instructions to generate a new one.")
 		const (
-			DefaultConfigPerm = 0640
-			DefaultBackEndPort = 5850
+			DefaultConfigPerm   = 0640
+			DefaultBackEndPort  = 5850
 			DefaultFrontEndPort = 5870
 		)
 		var defaultWebRoot = filepath.Join(workingPath, WebRootName)
-		var config = FrontEndConfig{}
-		if config.ListenAddress, err = framework.ChooseIPV4Address("Portal listen address");err !=nil{
+		var config = FrontEndConfig{
+			MaxCores:  DefaultMaxCores,
+			MaxMemory: DefaultMaxMemory,
+			MaxDisk:   DefaultMaxDisk,
+		}
+		if config.ListenAddress, err = framework.ChooseIPV4Address("Portal listen address"); err != nil {
 			return
 		}
-		if config.ListenPort, err = framework.InputInteger("Portal listen port", DefaultFrontEndPort); err !=nil{
+		if config.ListenPort, err = framework.InputInteger("Portal listen port", DefaultFrontEndPort); err != nil {
 			return
 		}
-		if config.ServiceHost, err = framework.InputString("Backend service address", config.ListenAddress); err !=nil{
+		if config.ServiceHost, err = framework.InputString("Backend service address", config.ListenAddress); err != nil {
 			return
 		}
-		if config.ServicePort, err = framework.InputInteger("Backend service port", DefaultBackEndPort); err != nil{
+		if config.ServicePort, err = framework.InputInteger("Backend service port", DefaultBackEndPort); err != nil {
 			return
 		}
-		if config.WebRoot, err = framework.InputString("Web Root Path", defaultWebRoot); err != nil{
+		if config.WebRoot, err = framework.InputString("Web Root Path", defaultWebRoot); err != nil {
 			return
 		}
 		//write
-		data, err := json.MarshalIndent(config, "", " ")
+		var data []byte
+		data, err = json.MarshalIndent(config, "", " ")
 		if err != nil {
 			return err
 		}
-		if err = ioutil.WriteFile(configFile, data, DefaultConfigPerm); err != nil {
+		if err = os.WriteFile(configFile, data, DefaultConfigPerm); err != nil {
 			return err
 		}
 		fmt.Printf("default configure '%s' generated\n", configFile)
@@ -124,14 +134,14 @@ func generateConfigure(workingPath string) (err error){
 	return
 }
 
-func createDaemon(workingPath string) (service framework.DaemonizedService, err error){
+func createDaemon(workingPath string) (service framework.DaemonizedService, err error) {
 	var configPath = filepath.Join(workingPath, ConfigPathName)
 	var dataPath = filepath.Join(workingPath, DataPathName)
-	if _, err = os.Stat(configPath); os.IsNotExist(err){
+	if _, err = os.Stat(configPath); os.IsNotExist(err) {
 		err = fmt.Errorf("config path %s not available", configPath)
 		return nil, err
 	}
-	if _, err = os.Stat(dataPath); os.IsNotExist(err){
+	if _, err = os.Stat(dataPath); os.IsNotExist(err) {
 		err = fmt.Errorf("data path %s not available", dataPath)
 		return nil, err
 	}

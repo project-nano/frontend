@@ -47,6 +47,9 @@ type FrontEndService struct {
 	webRoot                string
 	spaPage                string
 	runner                 *framework.SimpleRunner
+	maxCores               int
+	maxMemory              int
+	maxDisk                int
 }
 
 type Proxy struct {
@@ -94,7 +97,7 @@ func saveConfig(config FrontEndConfig, filename string) (err error) {
 func CreateFrontEnd(configPath, dataPath string) (service *FrontEndService, err error) {
 	var configFile = filepath.Join(configPath, ConfigFileName)
 	var data []byte
-	if data, err = ioutil.ReadFile(configFile); err != nil {
+	if data, err = os.ReadFile(configFile); err != nil {
 		return
 	}
 	var config FrontEndConfig
@@ -127,6 +130,37 @@ func CreateFrontEnd(configPath, dataPath string) (service *FrontEndService, err 
 		err = fmt.Errorf("web root path %s not exists", webRoot)
 		return
 	}
+	service = &FrontEndService{}
+	//max cores/memory/disk
+	log.Printf("debug config max core %d", config.MaxCores)
+	if (config.MaxCores > 1) && (0 == config.MaxCores%2) {
+		service.maxCores = config.MaxCores
+		log.Println("using config cores")
+	} else {
+		service.maxCores = DefaultMaxCores
+		config.MaxCores = DefaultMaxCores
+		if !configModified {
+			configModified = true
+		}
+	}
+	if config.MaxMemory > 1 && 0 == config.MaxMemory%2 {
+		service.maxMemory = config.MaxMemory
+	} else {
+		service.maxMemory = DefaultMaxMemory
+		config.MaxMemory = DefaultMaxMemory
+		if !configModified {
+			configModified = true
+		}
+	}
+	if config.MaxDisk > 1 && 0 == config.MaxDisk%2 {
+		service.maxDisk = config.MaxDisk
+	} else {
+		service.maxDisk = DefaultMaxDisk
+		config.MaxDisk = DefaultMaxDisk
+		if !configModified {
+			configModified = true
+		}
+	}
 	if configModified {
 		if err = saveConfig(config, configFile); err != nil {
 			log.Printf("<frontend> update config fail: %s", err.Error())
@@ -134,7 +168,6 @@ func CreateFrontEnd(configPath, dataPath string) (service *FrontEndService, err 
 		}
 	}
 
-	service = &FrontEndService{}
 	service.webRoot = webRoot
 	service.apiID = config.APIID
 	service.apiKey = config.APIKey
@@ -162,7 +195,7 @@ func CreateFrontEnd(configPath, dataPath string) (service *FrontEndService, err 
 	service.spaPage = filepath.Join(webRoot, DefaultPageName)
 	err = filepath.Walk(webRoot, func(path string, info os.FileInfo, previousErr error) error {
 		if previousErr != nil {
-			return fmt.Errorf("encounter error in path '%s': %s", previousErr.Error())
+			return fmt.Errorf("encounter error in path '%s': %s", path, previousErr.Error())
 		}
 		if path == webRoot || filepath.Dir(path) != webRoot {
 			//ignore root
@@ -214,12 +247,15 @@ func CreateFrontEnd(configPath, dataPath string) (service *FrontEndService, err 
 	}
 	sort.Reverse(sort.StringSlice(service.sortedSignatureHeaders))
 	log.Printf("<frontend> CORS %t, web root: %s", service.corsEnable, webRoot)
+	log.Printf("<frontend> instance cores up to %d, memory up to %d GB, disk up to %d GB",
+		service.maxCores, service.maxMemory, service.maxDisk)
 	return
 }
 
 func (service *FrontEndService) GetListenAddress() string {
 	return service.listenAddress
 }
+
 func (service *FrontEndService) GetBackendURL() string {
 	return service.backendURL
 }
@@ -1864,9 +1900,17 @@ func (service *FrontEndService) getVisibility(w http.ResponseWriter, r *http.Req
 func (service *FrontEndService) getSystemStatus(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	service.processCORSHeaders(w, r)
 	type Payload struct {
-		Ready bool `json:"ready"`
+		Ready     bool `json:"ready"`
+		MaxCores  int  `json:"max_cores,omitempty"`
+		MaxMemory int  `json:"max_memory,omitempty"`
+		MaxDisk   int  `json:"max_disk,omitempty"`
 	}
-	var payload = Payload{Ready: false}
+	var payload = Payload{
+		Ready:     false,
+		MaxCores:  service.maxCores,
+		MaxMemory: service.maxMemory,
+		MaxDisk:   service.maxDisk,
+	}
 	if !service.userInitialed {
 		var respChan = make(chan error, 1)
 		service.userManager.IsInitialed(respChan)
@@ -1880,7 +1924,7 @@ func (service *FrontEndService) getSystemStatus(w http.ResponseWriter, r *http.R
 	} else {
 		payload.Ready = true
 	}
-	ResponseOK(payload, w)
+	_ = ResponseOK(payload, w)
 }
 
 func (service *FrontEndService) initialSystemStatus(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
