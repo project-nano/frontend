@@ -2,11 +2,23 @@
 
 ## [1.4.0] - 2023-11-07
 
+### 新增
+
+- 配置文件"frontend.cfg"新增选项max_cores用于设置创建云主机的最大核心数，默认值24
+- 配置文件"frontend.cfg"新增选项max_memory用于设置创建云主机的最大内存容量(GB)，默认值32
+- 配置文件"frontend.cfg"新增选项max_disk用于设置创建云主机的最大磁盘容量(GB)，默认值64
+
+### 变更
+
+- 更新依赖包及go版本
+- 新增front_service测试用例
+- 接口'GET: /system/'返回资源配额
+
 ### Added
 
 - Add option "max_cores" to configure file "frontend.cfg", default value is 24
-- Add option "max_memory" to configure file "frontend.cfg", default value is 32GB
-- Add option "max_disk" to configure file "frontend.cfg", default value is 64GB
+- Add option "max_memory" in GB to configure file "frontend.cfg", default value is 32
+- Add option "max_disk" in GB to configure file "frontend.cfg", default value is 64
 
 ### Changed
 
