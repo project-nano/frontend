@@ -62,9 +62,9 @@ $/opt/nano/frontend/frontend start
 
 !!! **请注意：FrontEnd没有密码重置功能或者特殊后门，请牢记管理员密码，遗失后将无法访问系统**!!!
 
-此外，除了模块启动功能，FrontEnd还支持以下参数
+此外，除了模块启动功能，FrontEnd还支持以下命令参数启动
 
-| 参数   | 说明                               |
+| 命令名 | 说明                               |
 | ------ | ---------------------------------- |
 | start  | 启动服务                           |
 | stop   | 停止服务                           |
@@ -77,7 +77,7 @@ $/opt/nano/frontend/frontend start
 
 模块关键配置信息存储在'config/frontend.cfg'
 
-| 配置项           | 值类型 | 默认值                                      | 说明                                                    |
+| 参数             | 值类型 | 默认值                                      | 说明                                                    |
 | ---------------- | ------ | ------------------------------------------- | ------------------------------------------------------- |
 | **address**      | 字符串 |                                             | 提供管理页面服务的主机地址，IPv4格式                    |
 | **port**         | 整数   | 5870                                        | 提供管理页面服务的主机端口，默认5870                    |
@@ -171,26 +171,26 @@ The module logs are output to file: log/frontend.log
 
 FrontEnd also supports the following commands:
 
-| Parameter | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| start     | Start the service                                            |
-| stop      | Stop the service                                             |
-| status    | Check the current service status                             |
-| halt      | Forcefully terminate the service (restart when there is an exception) |
+| Command | Description                                                  |
+| ------- | ------------------------------------------------------------ |
+| start   | Start the service                                            |
+| stop    | Stop the service                                             |
+| status  | Check the current service status                             |
+| halt    | Forcefully terminate the service (restart when there is an exception) |
 
 ### Configuration
 
 The main configuration is stored in file: config/frontend.cfg
 
-| Configuration Item | Value Type | Default Value                               | Description                                                  |
-| ------------------ | ---------- | ------------------------------------------- | ------------------------------------------------------------ |
-| **address**        | String     |                                             | The host address for the management portal, IPv4 such as '192.168.3.1' |
-| **port**           | Integer    | 5870                                        | The host port for the management portal, default is 5870     |
-| **service_host**   | String     |                                             | The host address of API service of Core module. Must be the same as the configuration of Core module |
-| **service_port**   | Integer    | 5850                                        | The listening port of API service of Core module. Must be the same as the configuration of Core module. default is 5850 |
-| **api_key**        | String     | 'ThisIsAKeyPlaceHolder_ChangeToYourContent' | The encryption text used for verifying API service, must be the same as the configuration of Core module. |
-| **api_id**         | String     | 'dummyID'                                   | The ID used for verifying API service, Must be the same as the configuration of Core module. |
-| **web_root**       | String     | 'web_root'                                  | The path where the page files stored                         |
+| Parameter        | Value Type | Default Value                               | Description                                                  |
+| ---------------- | ---------- | ------------------------------------------- | ------------------------------------------------------------ |
+| **address**      | String     |                                             | The host address for the management portal, IPv4 such as '192.168.3.1' |
+| **port**         | Integer    | 5870                                        | The host port for the management portal, default is 5870     |
+| **service_host** | String     |                                             | The host address of API service of Core module. Must be the same as the configuration of Core module |
+| **service_port** | Integer    | 5850                                        | The listening port of API service of Core module. Must be the same as the configuration of Core module. default is 5850 |
+| **api_key**      | String     | 'ThisIsAKeyPlaceHolder_ChangeToYourContent' | The encryption text used for verifying API service, must be the same as the configuration of Core module. |
+| **api_id**       | String     | 'dummyID'                                   | The ID used for verifying API service, Must be the same as the configuration of Core module. |
+| **web_root**     | String     | 'web_root'                                  | The path where the page files stored                         |
 
 Assuming that the FrontEnd module address is 192.168.1.167 and the Core module address is 192.168.1.168, an example configuration file is as follows:
 
