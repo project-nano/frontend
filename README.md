@@ -14,6 +14,8 @@ FrontEnd是Nano项目自带的Web管理门户，对集群进行图形化管理�
 
 [项目全部源代码](https://github.com/project-nano)
 
+[Portal/页面源文件](https://github.com/project-nano/portal)
+
 ### 编译
 
 环境要求
@@ -77,15 +79,15 @@ $/opt/nano/frontend/frontend start
 
 模块关键配置信息存储在'config/frontend.cfg'
 
-| 参数             | 值类型 | 默认值                                      | 说明                                                    |
-| ---------------- | ------ | ------------------------------------------- | ------------------------------------------------------- |
-| **address**      | 字符串 |                                             | 提供管理页面服务的主机地址，IPv4格式                    |
-| **port**         | 整数   | 5870                                        | 提供管理页面服务的主机端口，默认5870                    |
-| **service_host** | 字符串 |                                             | Core模块API服务的主机地址，需要与Core模块配置一致       |
-| **service_port** | 整数   | 5850                                        | Core模块API服务的监听端口，需要与Core模块配置一致       |
-| **api_key**      | 字符串 | ‘ThisIsAKeyPlaceHolder_ChangeToYourContent’ | 用于Core模块API服务校验的密文，需要与Core模块配置一致   |
-| **api_id**       | 字符串 | ‘dummyID’                                   | 用于Core模块API服务校验的标识ID，需要与Core模块配置一致 |
-| **web_root**     | 字符串 | ‘web_root’                                  | Portal项目生成的页面文件存放路径                        |
+| 参数             | 值类型 | 默认值                                      | 说明                                                         |
+| ---------------- | ------ | ------------------------------------------- | ------------------------------------------------------------ |
+| **address**      | 字符串 |                                             | 提供管理页面服务的主机地址，IPv4格式                         |
+| **port**         | 整数   | 5870                                        | 提供管理页面服务的主机端口，默认5870                         |
+| **service_host** | 字符串 |                                             | Core模块API服务的主机地址，需要与Core模块配置一致            |
+| **service_port** | 整数   | 5850                                        | Core模块API服务的监听端口，需要与Core模块配置一致            |
+| **api_key**      | 字符串 | ‘ThisIsAKeyPlaceHolder_ChangeToYourContent’ | 用于Core模块API服务校验的密文，需要与Core模块配置一致        |
+| **api_id**       | 字符串 | ‘dummyID’                                   | 用于Core模块API服务校验的标识ID，需要与Core模块配置一致      |
+| **web_root**     | 字符串 | ‘web_root’                                  | [Portal项目](https://github.com/project-nano/portal)生成的页面文件存放路径 |
 
 假设FrontEnd模块地址为192.168.1.167，Core模块地址192.168.1.168，示例配置文件如下
 
@@ -127,6 +129,8 @@ It is recommended to use a dedicated Installer for deployment. For the latest pr
 [Official Project Website](https://us.nanos.cloud/en/)
 
 [Full Source Code of the Project](https://github.com/project-nano)
+
+[Portal page source code](https://github.com/project-nano/portal)
 
 ### Compilation
 
@@ -190,7 +194,7 @@ The main configuration is stored in file: config/frontend.cfg
 | **service_port** | Integer    | 5850                                        | The listening port of API service of Core module. Must be the same as the configuration of Core module. default is 5850 |
 | **api_key**      | String     | 'ThisIsAKeyPlaceHolder_ChangeToYourContent' | The encryption text used for verifying API service, must be the same as the configuration of Core module. |
 | **api_id**       | String     | 'dummyID'                                   | The ID used for verifying API service, Must be the same as the configuration of Core module. |
-| **web_root**     | String     | 'web_root'                                  | The path where the page files stored                         |
+| **web_root**     | String     | 'web_root'                                  | [Portal](https://github.com/project-nano/portal) generated page files |
 
 Assuming that the FrontEnd module address is 192.168.1.167 and the Core module address is 192.168.1.168, an example configuration file is as follows:
 
